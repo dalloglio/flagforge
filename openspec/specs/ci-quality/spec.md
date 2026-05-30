@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define the repository quality gates, local scripts, automated tests, and CI checks that keep FlagForge changes verifiable.
+
+## Requirements
 
 ### Requirement: Local quality scripts
 

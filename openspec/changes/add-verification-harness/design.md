@@ -31,10 +31,10 @@ The verification harness should make local validation and CI validation predicta
   - The command should run `typecheck`, `lint`, `format:check`, `test`, and `openspec validate --all --strict`.
   - Alternative considered: add `check` instead of `verify`. `verify` is clearer for completion gating and avoids ambiguity with individual check tools.
 
-- Make CI run an automation-oriented verification path.
+- Make CI run automation-oriented quality gates.
   - Rationale: CI should enforce the same quality surface as local verification and include strict OpenSpec validation.
-  - CI can either run `npm run verify` plus a dedicated `openspec validate --all --strict --json` step, or expose a `verify:ci` script that uses JSON for the OpenSpec step.
-  - Preferred implementation: add a dedicated `openspec validate --all --strict --json` step so the CI workflow remains concise and the JSON OpenSpec behavior is versioned in `package.json`.
+  - CI should run the discrete quality steps after `npm ci`: typecheck, lint, format check, tests, and a dedicated `openspec validate --all --strict --json` step.
+  - Preferred implementation: keep CI steps separate for readable failure reporting while relying on the same package scripts used by local verification.
 
 - Update repository guidance to name the harness explicitly.
   - Rationale: The verification command only helps agent behavior if the completion rule is part of the repo instructions.
@@ -43,6 +43,6 @@ The verification harness should make local validation and CI validation predicta
 ## Risks / Trade-offs
 
 - `verify` may take longer than running a focused test command during development → Use focused commands while iterating, then run `verify` at completion.
-- CI and local verification can drift if CI spells out individual commands separately → Prefer a `verify:ci` npm script or a single workflow step that delegates to package scripts.
+- CI and local verification can drift if CI spells out individual commands separately → Keep CI commands aligned with the scripts used by `npm run verify` and include the JSON OpenSpec step explicitly.
 - JSON OpenSpec output is less readable for local use → Keep local `verify` on human-readable OpenSpec output and use JSON only for the CI path.
 - Existing unrelated issues could cause `verify` to fail → Agent guidance limits fixes to failures directly related to the current change and requires reporting unrelated failures instead of broad cleanup.

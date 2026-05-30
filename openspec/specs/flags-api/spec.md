@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define the FlagForge HTTP API for health checks and feature flag management.
+
+## Requirements
 
 ### Requirement: Health endpoint
 
