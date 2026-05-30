@@ -3,6 +3,7 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import { randomUUID } from "node:crypto";
 import { evaluateFlag } from "../domain/evaluator.js";
 import {
   createFlagSchema,
@@ -10,16 +11,31 @@ import {
   flagKeySchema,
   updateFlagSchema,
 } from "../domain/schemas.js";
+import {
+  AuditLogRepository,
+  createFlagCreatedAuditEvent,
+  createFlagUpdatedAuditEvent,
+} from "../domain/audit-log.js";
 import { DuplicateFlagError, FlagRepository } from "../domain/repository.js";
 import { sendError, zodDetails } from "./errors.js";
 
+export type EventIdGenerator = () => string;
+export type Clock = () => string;
+
 export type AppDependencies = {
   repository?: FlagRepository;
+  auditLogRepository?: AuditLogRepository;
+  eventIdGenerator?: EventIdGenerator;
+  clock?: Clock;
 };
 
 export function createApp(dependencies: AppDependencies = {}) {
   const app = express();
   const repository = dependencies.repository ?? new FlagRepository();
+  const auditLogRepository =
+    dependencies.auditLogRepository ?? new AuditLogRepository();
+  const eventIdGenerator = dependencies.eventIdGenerator ?? randomUUID;
+  const clock = dependencies.clock ?? (() => new Date().toISOString());
 
   app.use(express.json());
 
@@ -41,6 +57,9 @@ export function createApp(dependencies: AppDependencies = {}) {
 
     try {
       const created = repository.create(parsed.data);
+      auditLogRepository.append(
+        createFlagCreatedAuditEvent(createAuditEventMetadata(), created),
+      );
       return response.status(201).json(created);
     } catch (error) {
       if (error instanceof DuplicateFlagError) {
@@ -53,6 +72,28 @@ export function createApp(dependencies: AppDependencies = {}) {
 
   app.get("/flags", (_request, response) => {
     response.status(200).json(repository.list());
+  });
+
+  app.get("/audit-log", (request, response) => {
+    const rawFlagKey = request.query.flagKey;
+    if (rawFlagKey === undefined) {
+      return response.status(200).json(auditLogRepository.list());
+    }
+
+    const parsed = flagKeySchema.safeParse(rawFlagKey);
+    if (!parsed.success) {
+      return sendError(
+        response,
+        400,
+        "validation_error",
+        "Invalid audit log filter",
+        zodDetails(parsed.error),
+      );
+    }
+
+    return response
+      .status(200)
+      .json(auditLogRepository.list({ flagKey: parsed.data }));
   });
 
   app.get("/flags/:key", (request, response) => {
@@ -91,8 +132,8 @@ export function createApp(dependencies: AppDependencies = {}) {
       );
     }
 
-    const updated = repository.update(key, parsed.data);
-    if (!updated) {
+    const before = repository.get(key);
+    if (!before) {
       return sendError(
         response,
         404,
@@ -100,6 +141,15 @@ export function createApp(dependencies: AppDependencies = {}) {
         `Feature flag '${key}' was not found`,
       );
     }
+
+    const updated = repository.update(key, parsed.data);
+    if (!updated) {
+      throw new Error("Expected feature flag to exist after pre-update read");
+    }
+
+    auditLogRepository.append(
+      createFlagUpdatedAuditEvent(createAuditEventMetadata(), before, updated),
+    );
 
     return response.status(200).json(updated);
   });
@@ -141,6 +191,13 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.use(jsonErrorHandler);
 
   return app;
+
+  function createAuditEventMetadata() {
+    return {
+      id: eventIdGenerator(),
+      occurredAt: clock(),
+    };
+  }
 }
 
 function parseKey(request: Request, response: Response): string | undefined {
