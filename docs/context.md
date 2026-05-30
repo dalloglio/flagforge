@@ -40,6 +40,10 @@ Pull requests must pass:
 
 The local completion gate is stricter and centralized as `npm run verify`, which runs typecheck, lint, format check, tests, and strict OpenSpec validation.
 
+## Commit rule
+
+Use Conventional Commits for commit messages, such as `feat: add evaluation route`, `fix: validate flag keys`, or `docs: update project guidance`.
+
 ## Current architecture
 
 - Runtime code lives in `src/`.
@@ -64,6 +68,7 @@ The MVP intentionally avoids persistence, authentication, authorization, tenancy
 - Use OpenSpec before implementing behavior changes.
 - Every behavior change needs tests.
 - Keep changes small.
+- Use Conventional Commits for commit messages.
 - Run `npm run verify` before marking work complete.
 - Do not introduce persistence unless the active OpenSpec change requests it.
 - Do not change public API behavior without updating OpenSpec specs.

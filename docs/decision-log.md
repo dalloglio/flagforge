@@ -47,3 +47,11 @@ Reason: important project context should live in files that agents, OpenSpec, an
 Consequence: repository guidance, context maps, specs, and decision logs become the source of truth for future work.
 
 Future change: update these files whenever decisions or working rules change.
+
+## 0007 - Use Conventional Commits
+
+Reason: commit messages should be consistent, machine-readable, and easy to scan in project history.
+
+Consequence: agents and contributors should use Conventional Commits such as `feat: add evaluation route`, `fix: validate flag keys`, and `docs: update project guidance`.
+
+Future change: add automated commit message linting if consistency becomes difficult to maintain manually.

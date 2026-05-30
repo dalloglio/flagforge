@@ -32,7 +32,7 @@ Use OpenSpec before implementing behavior changes. Do not introduce persistence 
 
 ## Commit & Pull Request Guidelines
 
-Recent history uses short imperative commits, sometimes with a conventional prefix, for example `Add FlagForge MVP` and `specs: proposal add-flagforge-mvp`. Keep commits focused and describe the user-visible change. Pull requests should include a concise summary, test results, linked issue or OpenSpec change when relevant, and API examples or screenshots only when they clarify behavior.
+Use Conventional Commits for commit messages, for example `feat: add flag evaluation endpoint`, `fix: reject invalid flag keys`, or `docs: update agent guidance`. Keep commits focused and describe the user-visible change. Pull requests should include a concise summary, test results, linked issue or OpenSpec change when relevant, and API examples or screenshots only when they clarify behavior.
 
 ## Security & Configuration Tips
 
