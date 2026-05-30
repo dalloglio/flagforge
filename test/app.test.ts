@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/api/app.js";
+import { AuditLogRepository } from "../src/domain/audit-log.js";
 
 let app: ReturnType<typeof createApp>;
 
@@ -216,6 +217,116 @@ describe("FlagForge API", () => {
       "Invalid feature flag update payload",
     );
   });
+
+  it("lists an empty audit log", async () => {
+    const response = await request(app).get("/audit-log");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+  });
+
+  it("records audit events for successful create and update requests", async () => {
+    useDeterministicAuditApp();
+
+    const createResponse = await request(app)
+      .post("/flags")
+      .send({
+        key: "checkout-redesign",
+        enabled: true,
+        rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
+      });
+    expect(createResponse.status).toBe(201);
+
+    const updateResponse = await request(app)
+      .patch("/flags/checkout-redesign")
+      .send({
+        enabled: false,
+        description: "Paused rollout",
+      });
+    expect(updateResponse.status).toBe(200);
+
+    const response = await request(app).get("/audit-log");
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([
+      {
+        id: "event-1",
+        occurredAt: "2026-05-30T17:00:00.000Z",
+        action: "flag_created",
+        flagKey: "checkout-redesign",
+        before: null,
+        after: createResponse.body,
+      },
+      {
+        id: "event-2",
+        occurredAt: "2026-05-30T17:01:00.000Z",
+        action: "flag_updated",
+        flagKey: "checkout-redesign",
+        before: createResponse.body,
+        after: updateResponse.body,
+      },
+    ]);
+  });
+
+  it("does not record audit events for invalid, duplicate, or not-found mutations", async () => {
+    useDeterministicAuditApp();
+
+    const invalidCreateResponse = await request(app).post("/flags").send({
+      key: "",
+      enabled: true,
+      rules: [],
+    });
+    expect(invalidCreateResponse.status).toBe(400);
+
+    await createFlag("checkout-redesign");
+
+    const duplicateResponse = await createFlag("checkout-redesign");
+    expect(duplicateResponse.status).toBe(409);
+
+    const invalidUpdateResponse = await request(app)
+      .patch("/flags/checkout-redesign")
+      .send({});
+    expect(invalidUpdateResponse.status).toBe(400);
+
+    const notFoundUpdateResponse = await request(app)
+      .patch("/flags/missing")
+      .send({ enabled: false });
+    expect(notFoundUpdateResponse.status).toBe(404);
+
+    const response = await request(app).get("/audit-log");
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({
+      id: "event-1",
+      action: "flag_created",
+      flagKey: "checkout-redesign",
+    });
+  });
+
+  it("filters audit events by flag key", async () => {
+    useDeterministicAuditApp();
+
+    await createFlag("checkout-redesign");
+    await createFlag("pricing-page");
+
+    const response = await request(app).get(
+      "/audit-log?flagKey=checkout-redesign",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({
+      action: "flag_created",
+      flagKey: "checkout-redesign",
+    });
+  });
+
+  it("rejects invalid audit log filters", async () => {
+    const response = await request(app).get("/audit-log?flagKey=");
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("validation_error");
+    expect(response.body.error.message).toBe("Invalid audit log filter");
+  });
 });
 
 function createFlag(key: string) {
@@ -223,5 +334,20 @@ function createFlag(key: string) {
     key,
     enabled: true,
     rules: [],
+  });
+}
+
+function useDeterministicAuditApp() {
+  const ids = ["event-1", "event-2", "event-3"];
+  const timestamps = [
+    "2026-05-30T17:00:00.000Z",
+    "2026-05-30T17:01:00.000Z",
+    "2026-05-30T17:02:00.000Z",
+  ];
+
+  app = createApp({
+    auditLogRepository: new AuditLogRepository(),
+    eventIdGenerator: () => ids.shift() ?? "event-extra",
+    clock: () => timestamps.shift() ?? "2026-05-30T17:59:00.000Z",
   });
 }
