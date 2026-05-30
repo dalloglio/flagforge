@@ -11,6 +11,8 @@ FlagForge is a TypeScript/Node.js feature flag API. Runtime code lives in `src/`
 - `npm run typecheck`: runs `tsc --noEmit` against `src/`, `test/`, and config files.
 - `npm run lint`: runs ESLint across the repository.
 - `npm run format`: formats files with Prettier.
+- `npm run format:check`: checks Prettier formatting without rewriting files.
+- `npm run verify`: runs typecheck, lint, formatting checks, tests, and strict OpenSpec validation.
 
 Run `npm install` after dependency changes. The package is ESM (`"type": "module"`), so keep local TypeScript imports compatible with NodeNext resolution, including `.js` extensions for relative runtime imports.
 
@@ -20,7 +22,7 @@ Use TypeScript with strict compiler settings. Prefer small, focused modules and 
 
 ## Testing Guidelines
 
-Vitest is configured with globals and the Node environment. Name test files `*.test.ts` and place them in `test/`. Use Supertest for Express endpoint coverage and direct Vitest assertions for domain behavior. Add or update tests for every behavior change, especially API status codes, error payloads, schema validation, and flag evaluation rules. Before opening a PR, run `npm test`, `npm run typecheck`, and `npm run lint`.
+Vitest is configured with globals and the Node environment. Name test files `*.test.ts` and place them in `test/`. Use Supertest for Express endpoint coverage and direct Vitest assertions for domain behavior. Add or update tests for every behavior change, especially API status codes, error payloads, schema validation, and flag evaluation rules. Before opening a PR or considering implementation complete, run `npm run verify`. If verification fails, fix only failures directly related to the current change and report unrelated failures without broad cleanup.
 
 ## Commit & Pull Request Guidelines
 

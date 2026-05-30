@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define how clients evaluate feature flags and how rule matching determines evaluation responses.
+
+## Requirements
 
 ### Requirement: Evaluate feature flag
 
