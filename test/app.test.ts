@@ -41,6 +41,25 @@ describe("FlagForge API", () => {
     expect(readResponse.body).toEqual(createResponse.body);
   });
 
+  it("creates a flag with rollout configuration", async () => {
+    const response = await request(app)
+      .post("/flags")
+      .send({
+        key: "checkout-redesign",
+        enabled: true,
+        rules: [],
+        rollout: { percentage: 25, attribute: "userId" },
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [],
+      rollout: { percentage: 25, attribute: "userId" },
+    });
+  });
+
   it("updates a flag without allowing key changes", async () => {
     await createFlag("checkout-redesign");
 
@@ -71,6 +90,24 @@ describe("FlagForge API", () => {
     expect(keyChangeResponse.body.error.code).toBe("validation_error");
   });
 
+  it("updates a flag with rollout configuration", async () => {
+    await createFlag("checkout-redesign");
+
+    const response = await request(app)
+      .patch("/flags/checkout-redesign")
+      .send({
+        rollout: { percentage: 50, attribute: "accountId" },
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [],
+      rollout: { percentage: 50, attribute: "accountId" },
+    });
+  });
+
   it("evaluates an existing flag", async () => {
     await request(app)
       .post("/flags")
@@ -99,6 +136,21 @@ describe("FlagForge API", () => {
       key: "",
       enabled: "yes",
     });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("validation_error");
+    expect(response.body.error.message).toBe("Invalid feature flag payload");
+  });
+
+  it("rejects invalid rollout create payloads", async () => {
+    const response = await request(app)
+      .post("/flags")
+      .send({
+        key: "checkout-redesign",
+        enabled: true,
+        rules: [],
+        rollout: { percentage: 101, attribute: "" },
+      });
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("validation_error");
@@ -147,6 +199,22 @@ describe("FlagForge API", () => {
       });
     expect(evaluateResponse.status).toBe(400);
     expect(evaluateResponse.body.error.code).toBe("validation_error");
+  });
+
+  it("rejects invalid rollout update payloads", async () => {
+    await createFlag("checkout-redesign");
+
+    const response = await request(app)
+      .patch("/flags/checkout-redesign")
+      .send({
+        rollout: { percentage: 10.5, attribute: "userId" },
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("validation_error");
+    expect(response.body.error.message).toBe(
+      "Invalid feature flag update payload",
+    );
   });
 });
 

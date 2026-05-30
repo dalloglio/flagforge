@@ -12,9 +12,9 @@ Future change: add SQLite persistence through a dedicated OpenSpec change.
 
 Reason: `enabled` state plus simple `equals` and `in` context rules are enough to exercise validation, evaluation, and tests.
 
-Consequence: the API does not yet support percentage rollouts, bucketing, segments, environments, SDKs, or advanced targeting.
+Consequence: the initial API did not include percentage rollouts, bucketing, segments, environments, SDKs, or advanced targeting.
 
-Future change: add rollout and targeting capabilities through new OpenSpec specs.
+Future change: add targeting capabilities beyond simple rules and percentage rollouts through new OpenSpec specs.
 
 ## 0003 - Separate HTTP wiring from domain behavior
 
@@ -55,3 +55,11 @@ Reason: commit messages should be consistent, machine-readable, and easy to scan
 Consequence: agents and contributors should use Conventional Commits such as `feat: add evaluation route`, `fix: validate flag keys`, and `docs: update project guidance`.
 
 Future change: add automated commit message linting if consistency becomes difficult to maintain manually.
+
+## 0008 - Add deterministic percentage rollouts
+
+Reason: percentage rollouts are the next smallest targeting capability after `enabled` state and simple context rules, while still fitting the in-memory MVP.
+
+Consequence: flags may include optional rollout configuration with an integer percentage from `0` through `100` and a non-empty context attribute. Evaluation applies rollout after disabled-state and rule eligibility checks, using stable bucketing based on flag key plus normalized context value.
+
+Future change: add richer targeting concepts such as segments, environments, and SDK-facing contracts through dedicated OpenSpec changes.

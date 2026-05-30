@@ -39,6 +39,7 @@ export class FlagRepository {
       enabled: input.enabled ?? existing.enabled,
       description: input.description ?? existing.description,
       rules: input.rules ? [...input.rules] : existing.rules,
+      rollout: input.rollout ?? existing.rollout,
     };
 
     this.flags.set(key, cloneFlag(updated));
@@ -49,6 +50,7 @@ export class FlagRepository {
 function cloneFlag(flag: FeatureFlag): FeatureFlag {
   return {
     ...flag,
+    rollout: flag.rollout ? { ...flag.rollout } : undefined,
     rules: flag.rules.map((rule) => {
       if (rule.operator === "in") {
         return { ...rule, values: [...rule.values] };

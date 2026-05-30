@@ -60,8 +60,11 @@ FlagForge manages feature flags and evaluates them deterministically from:
 - an `enabled` state;
 - caller-provided context;
 - simple matching rules using the supported operators.
+- optional percentage rollout configuration using an integer percentage from `0` through `100` and a context attribute for deterministic bucketing.
 
-The MVP intentionally avoids persistence, authentication, authorization, tenancy, audit logs, percentage rollouts, bucketing, segments, environments, and SDKs.
+Rollout evaluation runs after disabled-state and rule eligibility checks. Rollout-controlled responses use `in_rollout`, `not_in_rollout`, or `missing_rollout_attribute` reasons.
+
+The MVP intentionally avoids persistence, authentication, authorization, tenancy, audit logs, segments, environments, and SDKs.
 
 ## Agent rules
 

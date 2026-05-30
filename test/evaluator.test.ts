@@ -70,6 +70,92 @@ describe("evaluateFlag", () => {
       reason: "no_matching_rule",
     });
   });
+
+  it("includes contexts inside the rollout bucket range", () => {
+    const flag = makeFlag({
+      rollout: { percentage: 50, attribute: "userId" },
+    });
+
+    expect(evaluateFlag(flag, { userId: "bob" })).toEqual({
+      key: "new-dashboard",
+      enabled: true,
+      reason: "in_rollout",
+    });
+  });
+
+  it("excludes contexts outside the rollout bucket range", () => {
+    const flag = makeFlag({
+      rollout: { percentage: 50, attribute: "userId" },
+    });
+
+    expect(evaluateFlag(flag, { userId: "alice" })).toEqual({
+      key: "new-dashboard",
+      enabled: false,
+      reason: "not_in_rollout",
+    });
+  });
+
+  it("excludes all contexts from zero percent rollout", () => {
+    const flag = makeFlag({
+      rollout: { percentage: 0, attribute: "userId" },
+    });
+
+    expect(evaluateFlag(flag, { userId: "bob" })).toEqual({
+      key: "new-dashboard",
+      enabled: false,
+      reason: "not_in_rollout",
+    });
+  });
+
+  it("includes all contexts in full rollout", () => {
+    const flag = makeFlag({
+      rollout: { percentage: 100, attribute: "userId" },
+    });
+
+    expect(evaluateFlag(flag, { userId: "alice" })).toEqual({
+      key: "new-dashboard",
+      enabled: true,
+      reason: "in_rollout",
+    });
+  });
+
+  it("returns false when rollout attribute is missing", () => {
+    const flag = makeFlag({
+      rollout: { percentage: 50, attribute: "userId" },
+    });
+
+    expect(evaluateFlag(flag, { plan: "pro" })).toEqual({
+      key: "new-dashboard",
+      enabled: false,
+      reason: "missing_rollout_attribute",
+    });
+  });
+
+  it("applies rollout after a rule match", () => {
+    const flag = makeFlag({
+      rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
+      rollout: { percentage: 50, attribute: "userId" },
+    });
+
+    expect(evaluateFlag(flag, { plan: "pro", userId: "alice" })).toEqual({
+      key: "new-dashboard",
+      enabled: false,
+      reason: "not_in_rollout",
+    });
+  });
+
+  it("skips rollout when rules do not match", () => {
+    const flag = makeFlag({
+      rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
+      rollout: { percentage: 100, attribute: "userId" },
+    });
+
+    expect(evaluateFlag(flag, { plan: "free", userId: "alice" })).toEqual({
+      key: "new-dashboard",
+      enabled: false,
+      reason: "no_matching_rule",
+    });
+  });
 });
 
 function makeFlag(overrides: Partial<FeatureFlag>): FeatureFlag {

@@ -21,6 +21,13 @@ export const ruleSchema = z.discriminatedUnion("operator", [
   inRuleSchema,
 ]);
 
+export const rolloutSchema = z
+  .object({
+    percentage: z.number().int().min(0).max(100),
+    attribute: z.string().trim().min(1),
+  })
+  .strict();
+
 export const flagKeySchema = z
   .string()
   .trim()
@@ -33,6 +40,7 @@ export const createFlagSchema = z
     enabled: z.boolean(),
     description: z.string().trim().min(1).optional(),
     rules: z.array(ruleSchema).default([]),
+    rollout: rolloutSchema.optional(),
   })
   .strict();
 
@@ -41,6 +49,7 @@ export const updateFlagSchema = z
     enabled: z.boolean().optional(),
     description: z.string().trim().min(1).optional(),
     rules: z.array(ruleSchema).optional(),
+    rollout: rolloutSchema.optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
