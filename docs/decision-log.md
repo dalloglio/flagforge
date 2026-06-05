@@ -1,12 +1,14 @@
 # Decision Log
 
+Durable accepted architecture, platform, tooling, and workflow decisions live in `docs/adr/`. This file remains a chronological learning log and summary of how the project reached those decisions.
+
 ## 0001 - Start with in-memory storage
 
 Reason: faster learning loop focused on API contracts, deterministic behavior, tests, and OpenSpec.
 
 Consequence: data is lost on restart and the service is not production-persistent.
 
-Future change: add SQLite persistence through a dedicated OpenSpec change.
+Future change: add PostgreSQL persistence through a dedicated OpenSpec change.
 
 ## 0002 - Keep the MVP feature flag model small
 
@@ -63,3 +65,11 @@ Reason: percentage rollouts are the next smallest targeting capability after `en
 Consequence: flags may include optional rollout configuration with an integer percentage from `0` through `100` and a non-empty context attribute. Evaluation applies rollout after disabled-state and rule eligibility checks, using stable bucketing based on flag key plus normalized context value.
 
 Future change: add richer targeting concepts such as segments, environments, and SDK-facing contracts through dedicated OpenSpec changes.
+
+## 0009 - Consolidate durable decisions into ADRs
+
+Reason: future changes need a versioned source of truth for accepted workflow, platform, architecture, and review decisions instead of reopening choices captured only in chat or informal notes.
+
+Consequence: `docs/adr/` is the durable source for accepted decisions; `docs/decision-log.md` records chronological learning notes.
+
+Future change: update or supersede ADRs when later OpenSpec changes intentionally revise accepted decisions.
