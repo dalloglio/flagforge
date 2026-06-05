@@ -1,0 +1,30 @@
+name: RFC
+description: Propose a significant design, workflow, or platform decision
+title: "rfc: "
+labels:
+  - rfc
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What decision or design is being proposed?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What constraints, goals, or prior decisions matter?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: What options should be compared?
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Expected artifact
+      description: Link an OpenSpec change, ADR, or technical design if one exists.

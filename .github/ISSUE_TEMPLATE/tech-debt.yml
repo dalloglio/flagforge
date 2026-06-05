@@ -1,0 +1,23 @@
+name: Tech Debt
+description: Track maintenance, cleanup, or engineering-quality work
+title: "chore: "
+labels:
+  - tech-debt
+body:
+  - type: textarea
+    id: debt
+    attributes:
+      label: Debt
+      description: What should be improved?
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What risk or friction does this create?
+  - type: textarea
+    id: approach
+    attributes:
+      label: Suggested approach
+      description: What changes or checks are likely needed?

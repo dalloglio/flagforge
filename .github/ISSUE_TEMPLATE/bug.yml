@@ -1,0 +1,30 @@
+name: Bug
+description: Report incorrect behavior or a regression
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide commands, requests, inputs, or failing tests.
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation notes
+      description: Include related specs, tests, logs, or screenshots if useful.
