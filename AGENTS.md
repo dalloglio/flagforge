@@ -4,6 +4,14 @@
 
 Read `docs/context.md` for the project context map. Use the focused files under `docs/context/` for product intent, domain vocabulary, architecture boundaries, and delivery workflow. Durable accepted decisions live in `docs/adr/`; `docs/decision-log.md` is a chronological learning log. Use `docs/templates/` for reusable planning/review artifacts and `docs/agent-playbooks/` for role-based review guidance. Keep these files updated when important project knowledge or decisions move from chat into the repository.
 
+## Agent Skills
+
+Project-specific Codex skills live in `.agents/skills/`.
+
+OpenSpec-generated skills may exist under `.codex/skills/openspec-*` and should be treated as OpenSpec-managed artifacts. Do not add FlagForge workflow skills under `.codex/skills/`.
+
+When creating or updating Codex skills, prefer the built-in `$skill-creator` skill and keep skills instruction-only unless deterministic scripts are explicitly required.
+
 ## Project Structure & Module Organization
 
 FlagForge is a TypeScript/Node.js feature flag API. Runtime code lives in `src/`: `src/server.ts` starts the Express server, `src/api/` contains HTTP routing and error handling, and `src/domain/` contains flag types, Zod schemas, repository logic, audit-log behavior, and evaluation behavior. Tests live in `test/` and mirror the API/domain split with files such as `test/app.test.ts` and `test/evaluator.test.ts`. OpenSpec requirements and archived change artifacts are under `openspec/`.
