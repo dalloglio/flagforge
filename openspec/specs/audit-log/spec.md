@@ -6,7 +6,7 @@ Define how FlagForge records and exposes audit events for feature flag mutations
 
 ### Requirement: Record flag mutation audit events
 
-The system SHALL record an audit event for each successful feature flag mutation.
+The system SHALL record a durable PostgreSQL audit event for each successful feature flag mutation.
 
 #### Scenario: Create flag records audit event
 
@@ -17,6 +17,11 @@ The system SHALL record an audit event for each successful feature flag mutation
 
 - **WHEN** a client successfully updates a feature flag with `PATCH /flags/{key}`
 - **THEN** the system records an audit event with action `flag_updated`, the updated flag key, an event ID, an ISO timestamp, the previous flag as `before`, and the updated flag as `after`
+
+#### Scenario: Persisted mutation and audit event survive together
+
+- **WHEN** a successful create or update mutation is committed and the application or repository is restarted against the same PostgreSQL database
+- **THEN** the changed flag state and its corresponding audit event are both still available
 
 #### Scenario: Rejected create does not record audit event
 
@@ -30,12 +35,17 @@ The system SHALL record an audit event for each successful feature flag mutation
 
 ### Requirement: List audit events
 
-The system SHALL expose recorded audit events through a read-only HTTP endpoint.
+The system SHALL expose recorded PostgreSQL audit events through a read-only HTTP endpoint.
 
 #### Scenario: Audit events are listed
 
 - **WHEN** a client sends `GET /audit-log`
 - **THEN** the system responds with HTTP 200 and a JSON array of audit events ordered from oldest to newest
+
+#### Scenario: Persisted audit events are listed after restart
+
+- **WHEN** audit events were recorded before an application or repository restart
+- **THEN** `GET /audit-log` responds with those persisted audit events ordered from oldest to newest
 
 #### Scenario: Empty audit log is listed
 
@@ -47,6 +57,11 @@ The system SHALL expose recorded audit events through a read-only HTTP endpoint.
 - **WHEN** a client sends `GET /audit-log?flagKey={key}`
 - **THEN** the system responds with HTTP 200 and a JSON array containing only audit events for the requested flag key ordered from oldest to newest
 
+#### Scenario: Persisted audit events can be filtered after restart
+
+- **WHEN** audit events for multiple flags were recorded before an application or repository restart
+- **THEN** `GET /audit-log?flagKey={key}` returns only persisted events for the requested flag key ordered from oldest to newest
+
 #### Scenario: Invalid audit log filter is rejected
 
 - **WHEN** a client sends `GET /audit-log` with an invalid `flagKey` query value
@@ -54,9 +69,14 @@ The system SHALL expose recorded audit events through a read-only HTTP endpoint.
 
 ### Requirement: Preserve audit event snapshots
 
-The system SHALL preserve audit event flag snapshots as they existed when each mutation was recorded.
+The system SHALL preserve audit event flag snapshots as they existed when each mutation was recorded, including after those snapshots are persisted in PostgreSQL.
 
 #### Scenario: Later updates do not mutate earlier audit events
 
 - **WHEN** a feature flag is created and then updated
 - **THEN** the audit event for the create operation still contains the originally created flag state
+
+#### Scenario: Persisted snapshots remain immutable after restart
+
+- **WHEN** an audit event is persisted with `before` and `after` snapshots and the flag is updated in a later application or repository lifecycle
+- **THEN** the earlier audit event snapshots remain unchanged

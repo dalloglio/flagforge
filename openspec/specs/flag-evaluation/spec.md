@@ -6,7 +6,7 @@ Define how clients evaluate feature flags and how rule matching determines evalu
 
 ### Requirement: Evaluate feature flag
 
-The system SHALL allow clients to evaluate a feature flag by key using a caller-provided context object.
+The system SHALL allow clients to evaluate a PostgreSQL-persisted feature flag by key using a caller-provided context object.
 
 #### Scenario: Enabled flag without rules evaluates true
 
@@ -17,6 +17,11 @@ The system SHALL allow clients to evaluate a feature flag by key using a caller-
 
 - **WHEN** a client evaluates an existing flag that is disabled
 - **THEN** the system responds with HTTP 200 and `enabled` equal to `false`
+
+#### Scenario: Persisted flag evaluates after restart
+
+- **WHEN** a client evaluates a flag that was persisted before an application or repository restart
+- **THEN** the system responds according to the same enabled-state, targeting-rule, and rollout behavior used before restart
 
 #### Scenario: Missing flag evaluation returns not found
 
@@ -72,7 +77,7 @@ The system SHALL include a reason in every successful evaluation response.
 
 ### Requirement: Evaluate percentage rollout
 
-The system SHALL support optional percentage rollout configuration that deterministically enables a flag for a stable subset of eligible evaluation contexts.
+The system SHALL support optional percentage rollout configuration that deterministically enables a flag for a stable subset of eligible evaluation contexts, including after the flag has been persisted in PostgreSQL and read in a later application lifecycle.
 
 #### Scenario: Rollout includes context
 
@@ -108,3 +113,8 @@ The system SHALL support optional percentage rollout configuration that determin
 
 - **WHEN** an enabled flag has non-matching rules and rollout configuration
 - **THEN** the evaluation result has `enabled` equal to `false` and `reason` equal to `no_matching_rule`
+
+#### Scenario: Rollout decision is stable after restart
+
+- **WHEN** a flag with rollout configuration is persisted and the same context is evaluated before and after an application or repository restart
+- **THEN** the rollout decision and reason are unchanged
