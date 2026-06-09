@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  AuditLogRepository,
+  InMemoryAuditLogRepository,
   createFlagCreatedAuditEvent,
   createFlagUpdatedAuditEvent,
   type AuditEvent,
@@ -8,8 +8,8 @@ import {
 import type { FeatureFlag } from "../src/domain/types.js";
 
 describe("AuditLogRepository", () => {
-  it("appends and lists events from oldest to newest", () => {
-    const repository = new AuditLogRepository();
+  it("appends and lists events from oldest to newest", async () => {
+    const repository = new InMemoryAuditLogRepository();
     const created = makeEvent({
       id: "event-1",
       action: "flag_created",
@@ -21,14 +21,14 @@ describe("AuditLogRepository", () => {
       flagKey: "checkout-redesign",
     });
 
-    repository.append(created);
-    repository.append(updated);
+    await repository.append(created);
+    await repository.append(updated);
 
-    expect(repository.list()).toEqual([created, updated]);
+    await expect(repository.list()).resolves.toEqual([created, updated]);
   });
 
-  it("filters events by flag key", () => {
-    const repository = new AuditLogRepository();
+  it("filters events by flag key", async () => {
+    const repository = new InMemoryAuditLogRepository();
     const checkoutEvent = makeEvent({
       id: "event-1",
       flagKey: "checkout-redesign",
@@ -38,16 +38,16 @@ describe("AuditLogRepository", () => {
       flagKey: "pricing-page",
     });
 
-    repository.append(checkoutEvent);
-    repository.append(pricingEvent);
+    await repository.append(checkoutEvent);
+    await repository.append(pricingEvent);
 
-    expect(repository.list({ flagKey: "checkout-redesign" })).toEqual([
-      checkoutEvent,
-    ]);
+    await expect(
+      repository.list({ flagKey: "checkout-redesign" }),
+    ).resolves.toEqual([checkoutEvent]);
   });
 
-  it("returns cloned event snapshots", () => {
-    const repository = new AuditLogRepository();
+  it("returns cloned event snapshots", async () => {
+    const repository = new InMemoryAuditLogRepository();
     const event = makeEvent({
       action: "flag_updated",
       before: makeFlag({ enabled: true }),
@@ -59,21 +59,21 @@ describe("AuditLogRepository", () => {
       after: makeFlag({ enabled: false }),
     });
 
-    const appended = repository.append(event);
+    const appended = await repository.append(event);
     appended.after.rules.push({
       attribute: "plan",
       operator: "in",
       values: ["pro"],
     });
     event.after.enabled = true;
-    const listed = repository.list();
+    const listed = await repository.list();
     listed[0]?.after.rules.push({
       attribute: "country",
       operator: "equals",
       value: "BR",
     });
 
-    expect(repository.list()).toEqual([expected]);
+    await expect(repository.list()).resolves.toEqual([expected]);
   });
 
   it("creates audit events with deterministic metadata", () => {

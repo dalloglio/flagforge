@@ -4,7 +4,7 @@
 
 FlagForge is a small production-like feature flag API used to practice specification-driven delivery, API design, testing, platform engineering, and agent-assisted development.
 
-The product goal is to make feature flag behavior explicit, testable, and easy to evolve through OpenSpec changes. The current API supports in-memory flag management, deterministic evaluation, percentage rollouts, and audit-log inspection.
+The product goal is to make feature flag behavior explicit, testable, and easy to evolve through OpenSpec changes. The current API supports PostgreSQL-backed flag management, deterministic evaluation, percentage rollouts, and audit-log inspection.
 
 ## Audience
 
@@ -18,12 +18,12 @@ The product goal is to make feature flag behavior explicit, testable, and easy t
 - Evaluate flags from caller-provided context.
 - Apply simple targeting rules and deterministic percentage rollout.
 - Record and list audit events for successful flag mutations.
-- Keep runtime storage in memory for the current MVP.
+- Persist feature flags and audit events in PostgreSQL.
+- Provide local PostgreSQL through Docker Compose and repeatable SQL migrations.
 
 ## Future scope
 
-- PostgreSQL persistence through a dedicated OpenSpec change.
-- Local platform simulation with Docker Compose, kind, Helm, Argo CD, Kong, PostgreSQL, Prometheus, Grafana, and OpenTelemetry.
+- Local platform simulation with kind, Helm, Argo CD, Kong, PostgreSQL, Prometheus, Grafana, and OpenTelemetry.
 - Future AWS target architecture with EKS, RDS PostgreSQL, ECR, ALB, IAM/OIDC, Argo CD, Helm, Kong, and observability tooling.
 
 ## Non-goals for current MVP
@@ -31,4 +31,3 @@ The product goal is to make feature flag behavior explicit, testable, and easy t
 - Authentication, authorization, tenancy, environments, SDKs, and segment management.
 - Production deployment behavior.
 - Cloud infrastructure implementation.
-- Durable persistence before the accepted PostgreSQL persistence change.

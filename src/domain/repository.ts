@@ -6,10 +6,18 @@ export class DuplicateFlagError extends Error {
   }
 }
 
-export class FlagRepository {
+export interface FlagRepository {
+  create(input: CreateFlagInput): Promise<FeatureFlag>;
+  list(): Promise<FeatureFlag[]>;
+  get(key: string): Promise<FeatureFlag | undefined>;
+  getForUpdate?(key: string): Promise<FeatureFlag | undefined>;
+  update(key: string, input: UpdateFlagInput): Promise<FeatureFlag | undefined>;
+}
+
+export class InMemoryFlagRepository implements FlagRepository {
   private readonly flags = new Map<string, FeatureFlag>();
 
-  create(input: CreateFlagInput): FeatureFlag {
+  async create(input: CreateFlagInput): Promise<FeatureFlag> {
     if (this.flags.has(input.key)) {
       throw new DuplicateFlagError(input.key);
     }
@@ -19,16 +27,23 @@ export class FlagRepository {
     return cloneFlag(flag);
   }
 
-  list(): FeatureFlag[] {
+  async list(): Promise<FeatureFlag[]> {
     return [...this.flags.values()].map(cloneFlag);
   }
 
-  get(key: string): FeatureFlag | undefined {
+  async get(key: string): Promise<FeatureFlag | undefined> {
     const flag = this.flags.get(key);
     return flag ? cloneFlag(flag) : undefined;
   }
 
-  update(key: string, input: UpdateFlagInput): FeatureFlag | undefined {
+  async getForUpdate(key: string): Promise<FeatureFlag | undefined> {
+    return this.get(key);
+  }
+
+  async update(
+    key: string,
+    input: UpdateFlagInput,
+  ): Promise<FeatureFlag | undefined> {
     const existing = this.flags.get(key);
     if (!existing) {
       return undefined;
@@ -47,7 +62,7 @@ export class FlagRepository {
   }
 }
 
-function cloneFlag(flag: FeatureFlag): FeatureFlag {
+export function cloneFlag(flag: FeatureFlag): FeatureFlag {
   return {
     ...flag,
     rollout: flag.rollout ? { ...flag.rollout } : undefined,

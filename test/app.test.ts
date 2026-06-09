@@ -1,12 +1,13 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/api/app.js";
-import { AuditLogRepository } from "../src/domain/audit-log.js";
+import { InMemoryAuditLogRepository } from "../src/domain/audit-log.js";
+import { InMemoryFlagRepository } from "../src/domain/repository.js";
 
 let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
-  app = createApp();
+  app = createTestApp();
 });
 
 describe("FlagForge API", () => {
@@ -346,8 +347,16 @@ function useDeterministicAuditApp() {
   ];
 
   app = createApp({
-    auditLogRepository: new AuditLogRepository(),
+    flags: new InMemoryFlagRepository(),
+    auditLog: new InMemoryAuditLogRepository(),
     eventIdGenerator: () => ids.shift() ?? "event-extra",
     clock: () => timestamps.shift() ?? "2026-05-30T17:59:00.000Z",
+  });
+}
+
+function createTestApp() {
+  return createApp({
+    flags: new InMemoryFlagRepository(),
+    auditLog: new InMemoryAuditLogRepository(),
   });
 }

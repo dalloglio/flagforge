@@ -2,7 +2,7 @@
 
 FlagForge is a small TypeScript/Express feature flag API used to practice OpenSpec-driven development, testing, delivery workflow design, and future platform engineering.
 
-The current runtime is intentionally small: it manages feature flags in memory, evaluates them deterministically from request context, supports simple targeting rules and percentage rollouts, and exposes an audit log for successful flag mutations.
+The current runtime persists feature flags and audit events in PostgreSQL, evaluates flags deterministically from request context, supports simple targeting rules and percentage rollouts, and exposes an audit log for successful flag mutations.
 
 ## Current Capabilities
 
@@ -10,22 +10,46 @@ The current runtime is intentionally small: it manages feature flags in memory, 
 - Evaluate feature flags through an HTTP API.
 - Validate external input with Zod.
 - Apply deterministic percentage rollouts.
-- Record and list in-memory audit events for flag mutations.
+- Record and list durable audit events for flag mutations.
+- Persist feature flags and audit events in PostgreSQL.
 - Verify behavior with Vitest, Supertest, TypeScript, ESLint, Prettier, and OpenSpec validation.
 
 ## Delivery Model
 
 OpenSpec is the source of truth for behavior changes. Durable decisions live in `docs/adr/`, focused context lives in `docs/context/`, and reusable delivery assets live in `docs/templates/` and `docs/agent-playbooks/`.
 
-Future work will add PostgreSQL persistence and local platform simulation through dedicated OpenSpec changes. Those capabilities are documented as decisions and targets, not current runtime behavior.
-
 ## Commands
 
 ```bash
 npm install
+npm run db:migrate
 npm run dev
 npm test
+npm run test:postgres
 npm run verify
 ```
 
 Use `npm run verify` before treating implementation work as complete.
+
+## Local PostgreSQL
+
+Start the local database with Docker Compose:
+
+```bash
+docker compose up -d postgres
+```
+
+Use this non-secret local connection string for development:
+
+```bash
+export DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
+```
+
+Apply migrations before starting the API:
+
+```bash
+npm run db:migrate
+npm run dev
+```
+
+PostgreSQL integration tests require a real database. Point them at a database with `TEST_DATABASE_URL`; if it is omitted, the harness uses `DATABASE_URL`.

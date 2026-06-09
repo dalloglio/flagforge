@@ -1,4 +1,5 @@
 import type { FeatureFlag } from "./types.js";
+import { cloneFlag } from "./repository.js";
 
 export type AuditEventAction = "flag_created" | "flag_updated";
 
@@ -16,16 +17,21 @@ export type AuditEventMetadata = {
   occurredAt: string;
 };
 
-export class AuditLogRepository {
+export interface AuditLogRepository {
+  append(event: AuditEvent): Promise<AuditEvent>;
+  list(filter?: { flagKey?: string | undefined }): Promise<AuditEvent[]>;
+}
+
+export class InMemoryAuditLogRepository implements AuditLogRepository {
   private readonly events: AuditEvent[] = [];
 
-  append(event: AuditEvent): AuditEvent {
+  async append(event: AuditEvent): Promise<AuditEvent> {
     const snapshot = cloneAuditEvent(event);
     this.events.push(snapshot);
     return cloneAuditEvent(snapshot);
   }
 
-  list(filter?: { flagKey?: string | undefined }): AuditEvent[] {
+  async list(filter?: { flagKey?: string | undefined }): Promise<AuditEvent[]> {
     const events =
       filter?.flagKey === undefined
         ? this.events
@@ -67,19 +73,5 @@ function cloneAuditEvent(event: AuditEvent): AuditEvent {
     ...event,
     before: event.before ? cloneFlag(event.before) : null,
     after: cloneFlag(event.after),
-  };
-}
-
-function cloneFlag(flag: FeatureFlag): FeatureFlag {
-  return {
-    ...flag,
-    rollout: flag.rollout ? { ...flag.rollout } : undefined,
-    rules: flag.rules.map((rule) => {
-      if (rule.operator === "in") {
-        return { ...rule, values: [...rule.values] };
-      }
-
-      return { ...rule };
-    }),
   };
 }
