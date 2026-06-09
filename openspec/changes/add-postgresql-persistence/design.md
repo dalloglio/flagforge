@@ -34,6 +34,13 @@ The existing domain model includes nested rule arrays, optional rollout configur
 
 Introduce repository contracts for flag storage and audit-log storage, then provide PostgreSQL implementations outside the pure domain behavior. The in-memory repositories can remain as explicit test doubles for focused unit tests, but the default runtime wiring should construct PostgreSQL-backed repositories.
 
+The intended boundary shape for this change is:
+
+- `src/domain/` keeps feature flag types, schemas, audit event construction, evaluation rules, and domain errors independent from PostgreSQL, Express, and transaction clients.
+- Application-level use cases coordinate create, update, read, list, evaluate, and audit-log workflows against repository contracts.
+- Infrastructure-level PostgreSQL adapters implement those contracts and own SQL, connection-pool usage, migrations, row hydration, and transaction execution.
+- `src/api/` validates HTTP input, calls application use cases, and maps application/domain errors to existing HTTP responses.
+
 Rationale: this follows ADR 0016 by keeping Express and PostgreSQL concerns outside domain rules. It also makes tests honest: persistence tests use PostgreSQL, while non-persistence tests can still inject in-memory doubles.
 
 Alternatives considered:
@@ -43,7 +50,7 @@ Alternatives considered:
 
 ### Convert persistence-facing app paths to async
 
-Repository methods used by API routes should become asynchronous so the same contract can support PostgreSQL I/O. Route handlers will `await` repository operations while preserving the existing request validation and error mapping behavior.
+Repository methods and application use cases used by API routes should become asynchronous so the same contracts can support PostgreSQL I/O. Route handlers will `await` application operations while preserving the existing request validation and error mapping behavior.
 
 Rationale: PostgreSQL access is naturally async in Node.js. Hiding async behavior behind synchronous-looking wrappers would add complexity and risk unhandled failures.
 
@@ -76,7 +83,11 @@ Alternatives considered:
 
 ### Make flag mutation plus audit append transactional
 
-Create and update flows should write the flag row and corresponding audit event in the same PostgreSQL transaction after validation succeeds. Duplicate keys, missing flags, and invalid payloads must not append audit events.
+Create and update application use cases should write the flag row and corresponding audit event in the same PostgreSQL transaction after validation succeeds. Duplicate keys, missing flags, and invalid payloads must not append audit events.
+
+The transaction boundary belongs to application orchestration plus infrastructure transaction support, not to Express route handlers or pure domain functions. The API must not receive a PostgreSQL transaction client, and domain functions must not import PostgreSQL APIs. The PostgreSQL adapter may expose a focused transaction helper or transactional repository factory so the use case can coordinate both repositories without a broad unit-of-work framework.
+
+For updates, the implementation must capture the previous flag snapshot and persist the updated flag plus audit event inside one transaction. The PostgreSQL path should protect the read-before/write-after sequence with row-level locking or an equivalent atomic SQL flow so concurrent updates cannot produce audit snapshots that do not match the committed mutation.
 
 Rationale: once state is durable, split writes can leave a created flag without an audit event or an audit event without the corresponding mutation. Atomic writes preserve the current successful-mutation semantics.
 
@@ -88,6 +99,8 @@ Alternatives considered:
 ### Use simple SQL migrations tracked in the database
 
 Add versioned SQL migration files and a Node.js migration runner that records applied migration filenames/checksums in a migrations table. The runner should apply migrations in lexical order and be callable for local setup and tests.
+
+If an already-applied migration filename is found with a different checksum, the runner should fail clearly and stop instead of reapplying, skipping, or mutating the migration history. This keeps local and future GitOps/RDS migration behavior deterministic and reviewable.
 
 Rationale: the project needs a repeatable migration path but does not yet need a heavyweight migration framework. SQL files keep schema changes reviewable and close to PostgreSQL.
 
@@ -136,6 +149,7 @@ Alternatives considered:
 - [Risk] Audit ordering can regress under identical timestamps. -> Mitigation: order by append sequence, not only timestamp.
 - [Risk] Integration tests can be slow or flaky if database setup is implicit. -> Mitigation: provide clear scripts/harness behavior and fail fast when the configured test database is unavailable.
 - [Risk] Transaction boundaries can be split accidentally between flag writes and audit writes. -> Mitigation: implement create/update mutation orchestration through a shared transaction path and cover rejected writes plus successful writes in integration tests.
+- [Risk] Concurrent updates can produce stale `before` snapshots if read and write are not protected together. -> Mitigation: capture `before`, write `after`, and append audit inside one transaction using row-level locking or an equivalent atomic SQL flow.
 - [Risk] Local configuration may expose secrets in logs. -> Mitigation: sanitize diagnostics and use non-secret Compose defaults only for local development.
 
 ## Migration Plan
@@ -143,11 +157,12 @@ Alternatives considered:
 1. Add PostgreSQL dependency, database configuration parsing, connection pool creation, and sanitized diagnostics.
 2. Add Docker Compose PostgreSQL service for local development.
 3. Add SQL migration files and a migration runner that can prepare an empty database.
-4. Introduce repository contracts and PostgreSQL-backed implementations for flags and audit events.
-5. Update app/server wiring so default runtime uses PostgreSQL and tests can explicitly inject in-memory repositories.
-6. Update API routes and tests for async repository calls while preserving existing response behavior.
-7. Add integration tests that run against real PostgreSQL and prove restart/lifecycle persistence for flags, evaluation, and audit events.
-8. Run `npm run verify` with PostgreSQL available.
+4. Introduce async repository contracts, application use cases, and PostgreSQL-backed infrastructure implementations for flags and audit events.
+5. Add focused transaction support for create/update use cases without exposing PostgreSQL transaction clients to API or domain code.
+6. Update app/server wiring so default runtime uses PostgreSQL-backed application dependencies and tests can explicitly inject in-memory repositories.
+7. Update API routes and tests for async application calls while preserving existing response behavior.
+8. Add integration tests that run against real PostgreSQL and prove restart/lifecycle persistence for flags, evaluation, and audit events.
+9. Run `npm run verify` with PostgreSQL available.
 
 Rollback for this local change is to stop the app, revert the code/configuration change, and drop the local Compose database volume if the migrated local schema is no longer needed. No production data migration or cloud rollback is in scope.
 
