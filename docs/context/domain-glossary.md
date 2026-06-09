@@ -34,7 +34,7 @@ An append-only record of a successful flag mutation with action, event ID, times
 
 ## Repository
 
-A storage abstraction for domain state. The current repositories are in memory; accepted future persistence is PostgreSQL.
+A storage abstraction for domain state. Runtime repositories are backed by PostgreSQL; in-memory repositories are explicit test doubles for focused tests.
 
 ## Capability spec
 

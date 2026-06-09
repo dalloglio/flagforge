@@ -3,39 +3,46 @@ import express, {
   type Request,
   type Response,
 } from "express";
-import { randomUUID } from "node:crypto";
-import { evaluateFlag } from "../domain/evaluator.js";
+import {
+  createFlagUseCases,
+  createInMemoryUseCaseDependencies,
+  type Clock,
+  type EventIdGenerator,
+  type FlagUseCases,
+} from "../application/flag-use-cases.js";
 import {
   createFlagSchema,
   evaluationRequestSchema,
   flagKeySchema,
   updateFlagSchema,
 } from "../domain/schemas.js";
+import type { AuditLogRepository } from "../domain/audit-log.js";
 import {
-  AuditLogRepository,
-  createFlagCreatedAuditEvent,
-  createFlagUpdatedAuditEvent,
-} from "../domain/audit-log.js";
-import { DuplicateFlagError, FlagRepository } from "../domain/repository.js";
+  DuplicateFlagError,
+  type FlagRepository,
+} from "../domain/repository.js";
 import { sendError, zodDetails } from "./errors.js";
 
-export type EventIdGenerator = () => string;
-export type Clock = () => string;
-
 export type AppDependencies = {
-  repository?: FlagRepository;
-  auditLogRepository?: AuditLogRepository;
+  useCases?: FlagUseCases;
+  flags?: FlagRepository;
+  auditLog?: AuditLogRepository;
   eventIdGenerator?: EventIdGenerator;
   clock?: Clock;
 };
 
 export function createApp(dependencies: AppDependencies = {}) {
   const app = express();
-  const repository = dependencies.repository ?? new FlagRepository();
-  const auditLogRepository =
-    dependencies.auditLogRepository ?? new AuditLogRepository();
-  const eventIdGenerator = dependencies.eventIdGenerator ?? randomUUID;
-  const clock = dependencies.clock ?? (() => new Date().toISOString());
+  const useCases =
+    dependencies.useCases ??
+    createFlagUseCases(
+      createInMemoryUseCaseDependencies({
+        flags: dependencies.flags,
+        auditLog: dependencies.auditLog,
+        eventIdGenerator: dependencies.eventIdGenerator,
+        clock: dependencies.clock,
+      }),
+    );
 
   app.use(express.json());
 
@@ -43,7 +50,7 @@ export function createApp(dependencies: AppDependencies = {}) {
     response.status(200).json({ status: "ok" });
   });
 
-  app.post("/flags", (request, response) => {
+  app.post("/flags", async (request, response) => {
     const parsed = createFlagSchema.safeParse(request.body);
     if (!parsed.success) {
       return sendError(
@@ -56,10 +63,7 @@ export function createApp(dependencies: AppDependencies = {}) {
     }
 
     try {
-      const created = repository.create(parsed.data);
-      auditLogRepository.append(
-        createFlagCreatedAuditEvent(createAuditEventMetadata(), created),
-      );
+      const created = await useCases.createFlag(parsed.data);
       return response.status(201).json(created);
     } catch (error) {
       if (error instanceof DuplicateFlagError) {
@@ -70,14 +74,14 @@ export function createApp(dependencies: AppDependencies = {}) {
     }
   });
 
-  app.get("/flags", (_request, response) => {
-    response.status(200).json(repository.list());
+  app.get("/flags", async (_request, response) => {
+    response.status(200).json(await useCases.listFlags());
   });
 
-  app.get("/audit-log", (request, response) => {
+  app.get("/audit-log", async (request, response) => {
     const rawFlagKey = request.query.flagKey;
     if (rawFlagKey === undefined) {
-      return response.status(200).json(auditLogRepository.list());
+      return response.status(200).json(await useCases.listAuditEvents());
     }
 
     const parsed = flagKeySchema.safeParse(rawFlagKey);
@@ -93,16 +97,16 @@ export function createApp(dependencies: AppDependencies = {}) {
 
     return response
       .status(200)
-      .json(auditLogRepository.list({ flagKey: parsed.data }));
+      .json(await useCases.listAuditEvents({ flagKey: parsed.data }));
   });
 
-  app.get("/flags/:key", (request, response) => {
+  app.get("/flags/:key", async (request, response) => {
     const key = parseKey(request, response);
     if (!key) {
       return;
     }
 
-    const flag = repository.get(key);
+    const flag = await useCases.getFlag(key);
     if (!flag) {
       return sendError(
         response,
@@ -115,7 +119,7 @@ export function createApp(dependencies: AppDependencies = {}) {
     return response.status(200).json(flag);
   });
 
-  app.patch("/flags/:key", (request, response) => {
+  app.patch("/flags/:key", async (request, response) => {
     const key = parseKey(request, response);
     if (!key) {
       return;
@@ -132,8 +136,8 @@ export function createApp(dependencies: AppDependencies = {}) {
       );
     }
 
-    const before = repository.get(key);
-    if (!before) {
+    const updated = await useCases.updateFlag(key, parsed.data);
+    if (!updated) {
       return sendError(
         response,
         404,
@@ -142,19 +146,10 @@ export function createApp(dependencies: AppDependencies = {}) {
       );
     }
 
-    const updated = repository.update(key, parsed.data);
-    if (!updated) {
-      throw new Error("Expected feature flag to exist after pre-update read");
-    }
-
-    auditLogRepository.append(
-      createFlagUpdatedAuditEvent(createAuditEventMetadata(), before, updated),
-    );
-
     return response.status(200).json(updated);
   });
 
-  app.post("/flags/:key/evaluate", (request, response) => {
+  app.post("/flags/:key/evaluate", async (request, response) => {
     const key = parseKey(request, response);
     if (!key) {
       return;
@@ -171,8 +166,8 @@ export function createApp(dependencies: AppDependencies = {}) {
       );
     }
 
-    const flag = repository.get(key);
-    if (!flag) {
+    const result = await useCases.evaluateFlag(key, parsed.data.context);
+    if (!result) {
       return sendError(
         response,
         404,
@@ -181,7 +176,7 @@ export function createApp(dependencies: AppDependencies = {}) {
       );
     }
 
-    return response.status(200).json(evaluateFlag(flag, parsed.data.context));
+    return response.status(200).json(result);
   });
 
   app.use((_request, response) => {
@@ -191,13 +186,6 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.use(jsonErrorHandler);
 
   return app;
-
-  function createAuditEventMetadata() {
-    return {
-      id: eventIdGenerator(),
-      occurredAt: clock(),
-    };
-  }
 }
 
 function parseKey(request: Request, response: Response): string | undefined {

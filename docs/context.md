@@ -55,10 +55,12 @@ Use Conventional Commits for commit messages, such as `feat: add evaluation rout
 - Runtime code lives in `src/`.
 - `src/server.ts` starts the Express server.
 - `src/api/` owns HTTP routing, request validation, dependency wiring, and error mapping.
-- `src/domain/` owns flag types, Zod schemas, repository behavior, audit-log behavior, and evaluation logic.
+- `src/application/` owns feature flag and audit-log use case orchestration.
+- `src/domain/` owns flag types, Zod schemas, repository contracts, audit event construction, and evaluation logic.
+- `src/infrastructure/postgres/` owns PostgreSQL configuration, migrations, adapters, and transaction support.
 - Tests live in `test/` and mirror API/domain boundaries.
-- Storage is intentionally in-memory for the current MVP.
-- Accepted future persistence target is PostgreSQL.
+- Runtime storage uses PostgreSQL.
+- In-memory repositories remain explicit test doubles for focused tests.
 
 ## Current Behavior Model
 

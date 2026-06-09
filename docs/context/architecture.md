@@ -4,8 +4,10 @@
 
 - `src/server.ts` starts the Express server.
 - `src/api/` owns HTTP routing, request validation, dependency wiring, and transport error mapping.
-- `src/domain/` owns flag types, Zod schemas, repository behavior, audit-log behavior, and evaluation rules.
-- `test/` mirrors the API and domain boundaries with Supertest and Vitest coverage.
+- `src/application/` owns feature flag and audit-log use case orchestration.
+- `src/domain/` owns flag types, Zod schemas, repository contracts, audit event construction, and evaluation rules.
+- `src/infrastructure/postgres/` owns PostgreSQL configuration, migrations, repository adapters, and transaction support.
+- `test/` mirrors API, domain, and PostgreSQL persistence boundaries with Supertest and Vitest coverage.
 
 ## Architectural direction
 
@@ -16,9 +18,11 @@ FlagForge uses a pragmatic hexagonal architecture and DDD-lite direction:
 - Infrastructure concerns should be introduced behind focused adapters when an active OpenSpec change requires them.
 - Abstractions should exist only when they remove real complexity or protect an actual boundary.
 
-## Persistence direction
+## Persistence model
 
-The current MVP intentionally uses in-memory storage. The accepted persistence target is PostgreSQL, first through Docker Compose, then inside kind for local platform simulation, and later RDS PostgreSQL for the AWS target.
+The current runtime persistence path is PostgreSQL. Local development uses Docker Compose with non-secret defaults, versioned SQL migrations, and a Node.js migration runner. In-memory repositories remain available only as explicit test doubles for focused tests.
+
+The future platform path is PostgreSQL inside kind for local platform simulation and later RDS PostgreSQL for the AWS target.
 
 SQLite is not the future persistence target for this project.
 
@@ -40,5 +44,5 @@ Level 3 AWS work is a future target architecture, not current implementation.
 
 - Use OpenSpec before public behavior changes.
 - Do not alter API contracts without specs and tests.
-- Do not introduce persistence or platform behavior before the active change requests it.
+- Do not introduce additional persistence or platform behavior before an active change requests it.
 - Keep `src/` and `test/` untouched for documentation-only workflow foundation changes.
