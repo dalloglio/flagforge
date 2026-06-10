@@ -1,3 +1,5 @@
+import "./local-env.js";
+
 import { createApp } from "./api/app.js";
 import { parseDatabaseConfig } from "./infrastructure/postgres/config.js";
 import { createPostgresUseCases } from "./infrastructure/postgres/dependencies.js";

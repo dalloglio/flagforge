@@ -26,6 +26,7 @@ docker compose up -d postgres
 npm run db:migrate
 npm run dev
 npm test
+docker compose up -d postgres-test
 npm run test:postgres
 npm run build
 docker build -t flagforge-api:local .
@@ -38,17 +39,15 @@ Use `npm run verify` before treating implementation work as complete. It runs ho
 
 ## Local PostgreSQL
 
-Start the local database with Docker Compose:
+Create a local `.env` from `.env.example` for host runtime and migration defaults. It provides the development database URL and port used by `npm run db:migrate` and `npm run dev`.
+
+Start the local development database with Docker Compose:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Use this non-secret local connection string for development:
-
-```bash
-export DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
-```
+The development database uses `postgres://flagforge:flagforge@localhost:5432/flagforge`.
 
 Apply migrations before starting the API:
 
@@ -57,7 +56,14 @@ npm run db:migrate
 npm run dev
 ```
 
-PostgreSQL integration tests require a real database. Point them at a database with `TEST_DATABASE_URL`; if it is omitted, the harness uses `DATABASE_URL`.
+PostgreSQL integration tests are destructive for the database named by `TEST_DATABASE_URL`: the harness truncates feature flags and audit events before each test. Start the isolated test service and use the committed `.env.test` defaults:
+
+```bash
+docker compose up -d postgres-test
+npm run test:postgres
+```
+
+`.env.test` points at `postgres://flagforge:flagforge@localhost:5433/flagforge_test`. The integration harness requires `TEST_DATABASE_URL` and never falls back to `DATABASE_URL`.
 
 ## Docker
 
@@ -71,7 +77,6 @@ Run the local app plus PostgreSQL stack after applying migrations:
 
 ```bash
 docker compose up -d postgres
-export DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
 npm run db:migrate
 docker compose up -d app
 curl --fail http://localhost:3000/health
@@ -83,6 +88,7 @@ The app container uses `DATABASE_URL=postgres://flagforge:flagforge@postgres:543
 
 ```bash
 make db-up
+make db-test-up
 make db-migrate
 make test-unit
 make test-postgres

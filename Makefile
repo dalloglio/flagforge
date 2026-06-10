@@ -1,10 +1,13 @@
-.PHONY: dev db-up db-migrate test test-unit test-postgres build docker-build compose-up smoke-health typecheck lint format-check verify openspec-validate
+.PHONY: dev db-up db-test-up db-migrate test test-unit test-postgres build docker-build compose-up smoke-health typecheck lint format-check verify openspec-validate
 
 dev:
 	npm run dev
 
 db-up:
 	docker compose up -d postgres
+
+db-test-up:
+	docker compose up -d postgres-test
 
 db-migrate:
 	npm run db:migrate
