@@ -1,10 +1,34 @@
-.PHONY: dev test typecheck lint format-check verify openspec-validate
+.PHONY: dev db-up db-migrate test test-unit test-postgres build docker-build compose-up smoke-health typecheck lint format-check verify openspec-validate
 
 dev:
 	npm run dev
 
+db-up:
+	docker compose up -d postgres
+
+db-migrate:
+	npm run db:migrate
+
 test:
 	npm test
+
+test-unit:
+	npm run test:unit
+
+test-postgres:
+	npm run test:postgres
+
+build:
+	npm run build
+
+docker-build:
+	docker build -t flagforge-api:local .
+
+compose-up:
+	docker compose up -d app
+
+smoke-health:
+	curl --fail http://localhost:$${PORT:-3000}/health
 
 typecheck:
 	npm run typecheck

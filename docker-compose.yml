@@ -1,4 +1,17 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://flagforge:flagforge@postgres:5432/flagforge
+      PORT: 3000
+    ports:
+      - "${PORT:-3000}:3000"
+
   postgres:
     image: postgres:17-alpine
     ports:
