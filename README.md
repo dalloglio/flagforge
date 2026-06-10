@@ -22,14 +22,19 @@ OpenSpec is the source of truth for behavior changes. Durable decisions live in 
 
 ```bash
 npm install
+docker compose up -d postgres
 npm run db:migrate
 npm run dev
 npm test
 npm run test:postgres
+npm run build
+docker build -t flagforge-api:local .
+docker compose up -d app
+curl --fail http://localhost:3000/health
 npm run verify
 ```
 
-Use `npm run verify` before treating implementation work as complete.
+Use `npm run verify` before treating implementation work as complete. It runs host-only checks and does not require Docker or PostgreSQL. Run PostgreSQL integration, Docker build, and Compose smoke checks explicitly when those tools are available.
 
 ## Local PostgreSQL
 
@@ -53,3 +58,39 @@ npm run dev
 ```
 
 PostgreSQL integration tests require a real database. Point them at a database with `TEST_DATABASE_URL`; if it is omitted, the harness uses `DATABASE_URL`.
+
+## Docker
+
+Build the production API image:
+
+```bash
+docker build -t flagforge-api:local .
+```
+
+Run the local app plus PostgreSQL stack after applying migrations:
+
+```bash
+docker compose up -d postgres
+export DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
+npm run db:migrate
+docker compose up -d app
+curl --fail http://localhost:3000/health
+```
+
+The app container uses `DATABASE_URL=postgres://flagforge:flagforge@postgres:5432/flagforge` inside the Compose network and exposes the API on port `3000` by default. Migrations are intentionally not run by the app container startup command.
+
+## Make Targets
+
+```bash
+make db-up
+make db-migrate
+make test-unit
+make test-postgres
+make build
+make docker-build
+make compose-up
+make smoke-health
+make verify
+```
+
+Helm, kind, Argo CD, Kong, registry publishing, deployment, OpenAPI, and observability are out of scope for this repository change.

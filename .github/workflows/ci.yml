@@ -7,6 +7,23 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: flagforge_test
+          POSTGRES_USER: flagforge
+          POSTGRES_PASSWORD: flagforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flagforge -d flagforge_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://flagforge:flagforge@localhost:5432/flagforge_test
+      TEST_DATABASE_URL: postgres://flagforge:flagforge@localhost:5432/flagforge_test
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -23,14 +40,26 @@ jobs:
       - name: OpenSpec Validate
         run: npx --yes @fission-ai/openspec@1.3.1 validate --all --strict --json
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: Lint
         run: npm run lint
 
       - name: Format
         run: npm run format:check
 
-      - name: Test
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Migrate
+        run: npm run db:migrate
+
+      - name: Unit Test
         run: npm test
+
+      - name: PostgreSQL Integration Test
+        run: npm run test:postgres
+
+      - name: Build
+        run: npm run build
+
+      - name: Docker Build
+        run: docker build -t flagforge-api:ci .
