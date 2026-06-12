@@ -33,4 +33,4 @@ Not every role blocks every change. The review depth should match the risk and s
 
 ## Command wrappers
 
-`npm run verify` remains the local completion gate. The `Makefile` provides thin convenience wrappers and must not redefine the behavior of npm scripts or OpenSpec validation.
+`npm run verify` remains the local completion gate. It includes OpenAPI validation through `npm run openapi:validate`. The `Makefile` provides thin convenience wrappers and must not redefine the behavior of npm scripts or OpenSpec validation.

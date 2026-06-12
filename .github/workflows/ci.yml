@@ -49,6 +49,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: OpenAPI Validate
+        run: npm run openapi:validate
+
       - name: Migrate
         run: npm run db:migrate
 

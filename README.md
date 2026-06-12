@@ -12,7 +12,7 @@ The current runtime persists feature flags and audit events in PostgreSQL, evalu
 - Apply deterministic percentage rollouts.
 - Record and list durable audit events for flag mutations.
 - Persist feature flags and audit events in PostgreSQL.
-- Verify behavior with Vitest, Supertest, TypeScript, ESLint, Prettier, and OpenSpec validation.
+- Verify behavior with Vitest, Supertest, TypeScript, ESLint, Prettier, OpenAPI validation, and OpenSpec validation.
 
 ## Delivery Model
 
@@ -32,10 +32,30 @@ npm run build
 docker build -t flagforge-api:local .
 docker compose up -d app
 curl --fail http://localhost:3000/health
+npm run openapi:validate
+npm run openapi:preview
 npm run verify
 ```
 
-Use `npm run verify` before treating implementation work as complete. It runs host-only checks and does not require Docker or PostgreSQL. Run PostgreSQL integration, Docker build, and Compose smoke checks explicitly when those tools are available.
+Use `npm run verify` before treating implementation work as complete. It runs host-only checks, including OpenAPI validation, and does not require Docker or PostgreSQL. Run PostgreSQL integration, Docker build, and Compose smoke checks explicitly when those tools are available.
+
+## API Contract
+
+The canonical OpenAPI contract lives at `docs/api/openapi.yaml`.
+
+Validate it locally with:
+
+```bash
+npm run openapi:validate
+```
+
+Preview a static Redoc page with:
+
+```bash
+npm run openapi:preview
+```
+
+The preview command writes `/tmp/flagforge-openapi.html`; open that file in a browser to view the rendered contract. API behavior changes must keep OpenSpec specs, tests, and `docs/api/openapi.yaml` aligned in the same change.
 
 ## Local PostgreSQL
 
@@ -99,4 +119,4 @@ make smoke-health
 make verify
 ```
 
-Helm, kind, Argo CD, Kong, registry publishing, deployment, OpenAPI, and observability are out of scope for this repository change.
+Helm, kind, Argo CD, Kong, registry publishing, deployment, and observability are out of scope for this repository change.
