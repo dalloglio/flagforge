@@ -122,6 +122,27 @@ The project SHALL provide separate npm scripts for unit tests and PostgreSQL int
 - **WHEN** a developer inspects `package.json`
 - **THEN** the project defines a PostgreSQL integration test script that runs tests requiring a real PostgreSQL database
 
+### Requirement: PostgreSQL integration tests require explicit test database
+
+The PostgreSQL integration test harness SHALL require `TEST_DATABASE_URL` and SHALL NOT fall back to `DATABASE_URL`.
+
+#### Scenario: Test database URL is present
+
+- **WHEN** the PostgreSQL integration test script runs with `TEST_DATABASE_URL` configured
+- **THEN** the suite connects to the configured PostgreSQL test database
+
+#### Scenario: Test database URL is absent
+
+- **WHEN** the PostgreSQL integration test script runs without `TEST_DATABASE_URL`
+- **THEN** the suite does not connect to `DATABASE_URL`
+- **AND** it reports that `TEST_DATABASE_URL` is required for PostgreSQL integration tests
+
+#### Scenario: Runtime database URL is present without test database URL
+
+- **WHEN** the PostgreSQL integration test script runs with `DATABASE_URL` configured and `TEST_DATABASE_URL` absent
+- **THEN** the suite does not connect to the runtime database
+- **AND** no feature flags or audit events are truncated from the runtime database
+
 ### Requirement: Migration script remains canonical
 
 The project SHALL provide a canonical npm script for applying PostgreSQL migrations in local and CI workflows.
@@ -171,7 +192,7 @@ The CI workflow SHALL verify the application build and Docker image build in add
 
 ### Requirement: CI runs PostgreSQL-backed verification
 
-The CI workflow SHALL run migration and PostgreSQL integration gates against a PostgreSQL service container.
+The CI workflow SHALL run migration and PostgreSQL integration gates against a PostgreSQL service container through explicit test database configuration.
 
 #### Scenario: CI starts PostgreSQL service
 
@@ -187,6 +208,7 @@ The CI workflow SHALL run migration and PostgreSQL integration gates against a P
 
 - **WHEN** migrations have completed successfully in CI
 - **THEN** the workflow runs the PostgreSQL integration test script with a `TEST_DATABASE_URL` that points at the service container
+- **AND** the integration test harness does not fall back to `DATABASE_URL`
 
 ### Requirement: Makefile exposes Docker and database wrappers
 
