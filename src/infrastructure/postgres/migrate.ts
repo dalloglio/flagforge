@@ -97,6 +97,8 @@ export async function runMigrationsForConfig(
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await import("../../local-env.js");
+
   runMigrationsForConfig(parseDatabaseConfig())
     .then((result) => {
       console.log(

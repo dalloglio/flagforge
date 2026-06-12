@@ -5,7 +5,6 @@ import { createFlagUseCases } from "../src/application/flag-use-cases.js";
 import { evaluateFlag } from "../src/domain/evaluator.js";
 import { DuplicateFlagError } from "../src/domain/repository.js";
 import type { FeatureFlag } from "../src/domain/types.js";
-import { parseDatabaseConfig } from "../src/infrastructure/postgres/config.js";
 import { createPostgresUseCases } from "../src/infrastructure/postgres/dependencies.js";
 import {
   MigrationChecksumError,
@@ -20,19 +19,19 @@ import {
   PostgresAuditLogRepository,
   PostgresFlagRepository,
 } from "../src/infrastructure/postgres/repositories.js";
+import {
+  loadPostgresTestEnvironment,
+  parsePostgresTestDatabaseConfig,
+} from "./postgres-test-environment.js";
 
 const { Pool } = pg;
-const databaseUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
-const maybeDescribe = databaseUrl ? describe : describe.skip;
+loadPostgresTestEnvironment();
+const config = parsePostgresTestDatabaseConfig();
 
-maybeDescribe("PostgreSQL persistence", () => {
+describe("PostgreSQL persistence", () => {
   let pool: PostgresPool;
 
   beforeAll(async () => {
-    const config = parseDatabaseConfig(
-      { TEST_DATABASE_URL: databaseUrl },
-      "TEST_DATABASE_URL",
-    );
     pool = createPostgresPool(config);
     await assertPostgresAvailable(pool);
     await runMigrations(pool);

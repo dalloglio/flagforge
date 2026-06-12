@@ -28,5 +28,19 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-test:
+    image: postgres:17-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: flagforge_test
+      POSTGRES_USER: flagforge
+      POSTGRES_PASSWORD: flagforge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flagforge -d flagforge_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   flagforge-postgres-data:
