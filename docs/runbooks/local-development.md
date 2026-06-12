@@ -51,7 +51,25 @@ npm run build
 npm run verify
 ```
 
-`npm run verify` is host-only and does not require Docker or PostgreSQL. Run PostgreSQL integration tests separately when a database is available.
+`npm run verify` is host-only and does not require Docker or PostgreSQL. It includes OpenAPI validation. Run PostgreSQL integration tests separately when a database is available.
+
+## API Contract
+
+The canonical API contract is `docs/api/openapi.yaml`.
+
+Validate the contract:
+
+```bash
+npm run openapi:validate
+```
+
+Preview the rendered contract:
+
+```bash
+npm run openapi:preview
+```
+
+The preview command writes `/tmp/flagforge-openapi.html`, which can be opened in a browser. Keep OpenSpec specs, tests, and `docs/api/openapi.yaml` aligned whenever API behavior changes.
 
 The PostgreSQL integration harness loads `.env.test`, applies migrations to `flagforge_test`, and truncates `audit_events` and `feature_flags` before each test.
 
@@ -106,4 +124,4 @@ If `/health` fails, check `docker compose logs app postgres`, confirm migrations
 
 ## Out of Scope
 
-Helm, kind, Argo CD, Kong, registry publishing, deployment, OpenAPI, and observability remain out of scope for this change.
+Helm, kind, Argo CD, Kong, registry publishing, deployment, and observability remain out of scope for this change.

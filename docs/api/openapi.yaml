@@ -1,0 +1,442 @@
+openapi: 3.0.3
+info:
+  title: FlagForge API
+  version: 1.0.0
+  description: Source-controlled OpenAPI contract for the current FlagForge HTTP API.
+  license:
+    name: ISC
+    url: https://opensource.org/license/isc-license-txt
+servers:
+  - url: /
+    description: Local development server
+security: []
+tags:
+  - name: Health
+    description: Health check endpoints.
+  - name: Flags
+    description: Feature flag management endpoints.
+  - name: Evaluation
+    description: Feature flag evaluation endpoints.
+  - name: Audit Log
+    description: Audit event inspection endpoints.
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Check API health
+      operationId: getHealth
+      responses:
+        "200":
+          description: API is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /flags:
+    post:
+      tags:
+        - Flags
+      summary: Create a feature flag
+      operationId: createFlag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlagRequest"
+      responses:
+        "201":
+          description: Feature flag created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+        "400":
+          description: Invalid feature flag payload or malformed JSON request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: A feature flag with the requested key already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      tags:
+        - Flags
+      summary: List feature flags
+      operationId: listFlags
+      responses:
+        "200":
+          description: Feature flags returned from oldest to newest repository order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureFlag"
+  /flags/{key}:
+    parameters:
+      - $ref: "#/components/parameters/FlagKeyPath"
+    get:
+      tags:
+        - Flags
+      summary: Get a feature flag
+      operationId: getFlag
+      responses:
+        "200":
+          description: Feature flag found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+        "400":
+          description: Invalid feature flag key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Feature flag was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+        - Flags
+      summary: Update a feature flag
+      operationId: updateFlag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFlagRequest"
+      responses:
+        "200":
+          description: Feature flag updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+        "400":
+          description: Invalid feature flag key, invalid update payload, or malformed JSON request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Feature flag was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /flags/{key}/evaluate:
+    parameters:
+      - $ref: "#/components/parameters/FlagKeyPath"
+    post:
+      tags:
+        - Evaluation
+      summary: Evaluate a feature flag
+      operationId: evaluateFlag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluationRequest"
+      responses:
+        "200":
+          description: Evaluation result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationResult"
+        "400":
+          description: Invalid feature flag key, invalid evaluation payload, or malformed JSON request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Feature flag was not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /audit-log:
+    get:
+      tags:
+        - Audit Log
+      summary: List audit events
+      operationId: listAuditEvents
+      parameters:
+        - name: flagKey
+          in: query
+          required: false
+          description: Optional feature flag key filter.
+          schema:
+            $ref: "#/components/schemas/FlagKey"
+      responses:
+        "200":
+          description: Audit events returned from oldest to newest.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
+        "400":
+          description: Invalid audit log filter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  parameters:
+    FlagKeyPath:
+      name: key
+      in: path
+      required: true
+      description: Feature flag key. The API trims input and accepts non-empty keys containing letters, numbers, dots, underscores, and hyphens.
+      schema:
+        $ref: "#/components/schemas/FlagKey"
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+    FlagKey:
+      type: string
+      minLength: 1
+      pattern: ^[a-zA-Z0-9._-]+$
+      example: checkout-redesign
+    ContextValue:
+      oneOf:
+        - type: string
+        - type: number
+        - type: boolean
+    EvaluationContext:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/ContextValue"
+      example:
+        country: BR
+        plan: pro
+        accountAgeDays: 42
+        betaTester: true
+    EqualsRule:
+      type: object
+      additionalProperties: false
+      required:
+        - attribute
+        - operator
+        - value
+      properties:
+        attribute:
+          type: string
+          minLength: 1
+        operator:
+          type: string
+          enum:
+            - equals
+        value:
+          $ref: "#/components/schemas/ContextValue"
+    InRule:
+      type: object
+      additionalProperties: false
+      required:
+        - attribute
+        - operator
+        - values
+      properties:
+        attribute:
+          type: string
+          minLength: 1
+        operator:
+          type: string
+          enum:
+            - in
+        values:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ContextValue"
+    Rule:
+      oneOf:
+        - $ref: "#/components/schemas/EqualsRule"
+        - $ref: "#/components/schemas/InRule"
+      discriminator:
+        propertyName: operator
+        mapping:
+          equals: "#/components/schemas/EqualsRule"
+          in: "#/components/schemas/InRule"
+    Rollout:
+      type: object
+      additionalProperties: false
+      required:
+        - percentage
+        - attribute
+      properties:
+        percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+        attribute:
+          type: string
+          minLength: 1
+    FeatureFlag:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - enabled
+        - rules
+      properties:
+        key:
+          $ref: "#/components/schemas/FlagKey"
+        enabled:
+          type: boolean
+        description:
+          type: string
+          minLength: 1
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+        rollout:
+          $ref: "#/components/schemas/Rollout"
+    CreateFlagRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - enabled
+      properties:
+        key:
+          $ref: "#/components/schemas/FlagKey"
+        enabled:
+          type: boolean
+        description:
+          type: string
+          minLength: 1
+        rules:
+          type: array
+          default: []
+          items:
+            $ref: "#/components/schemas/Rule"
+        rollout:
+          $ref: "#/components/schemas/Rollout"
+    UpdateFlagRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        enabled:
+          type: boolean
+        description:
+          type: string
+          minLength: 1
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+        rollout:
+          $ref: "#/components/schemas/Rollout"
+    EvaluationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        context:
+          $ref: "#/components/schemas/EvaluationContext"
+      default:
+        context: {}
+    EvaluationResult:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - enabled
+        - reason
+      properties:
+        key:
+          $ref: "#/components/schemas/FlagKey"
+        enabled:
+          type: boolean
+        reason:
+          type: string
+          enum:
+            - enabled
+            - disabled
+            - matched_rule
+            - no_matching_rule
+            - in_rollout
+            - not_in_rollout
+            - missing_rollout_attribute
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - occurredAt
+        - action
+        - flagKey
+        - before
+        - after
+      properties:
+        id:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        action:
+          type: string
+          enum:
+            - flag_created
+            - flag_updated
+        flagKey:
+          $ref: "#/components/schemas/FlagKey"
+        before:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/FeatureFlag"
+          nullable: true
+        after:
+          $ref: "#/components/schemas/FeatureFlag"
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+    ErrorBody:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - validation_error
+            - conflict
+            - not_found
+            - bad_request
+            - internal_error
+        message:
+          type: string
+        details:
+          description: Validation issue details when available.

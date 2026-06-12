@@ -44,7 +44,7 @@ Pull requests must pass:
 - `npm test`
 - `openspec validate --all --strict`
 
-The local completion gate is stricter and centralized as `npm run verify`, which runs typecheck, lint, format check, tests, and strict OpenSpec validation.
+The local completion gate is stricter and centralized as `npm run verify`, which runs typecheck, lint, format check, tests, OpenAPI validation, and strict OpenSpec validation.
 
 ## Commit Rule
 
@@ -85,7 +85,7 @@ The MVP intentionally avoids persistence, authentication, authorization, tenancy
 - Use Conventional Commits for commit messages.
 - Run `npm run verify` before marking work complete.
 - Do not introduce persistence unless the active OpenSpec change requests it.
-- Do not change public API behavior without updating OpenSpec specs.
+- Do not change public API behavior without updating OpenSpec specs and `docs/api/openapi.yaml`.
 
 ## Context Engineering Rule
 
