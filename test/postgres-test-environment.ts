@@ -5,7 +5,7 @@ import {
 } from "../src/infrastructure/postgres/config.js";
 
 export function loadPostgresTestEnvironment(): void {
-  loadDotenv({ path: ".env.test" });
+  loadDotenv({ path: ".env" });
 }
 
 export function parsePostgresTestDatabaseConfig(

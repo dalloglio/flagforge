@@ -2,18 +2,33 @@
 
 ## Environment
 
-Use non-secret local defaults for Docker-backed development. Keep runtime and destructive test configuration in separate dotenv files:
+Use one root `.env` file for non-secret Docker-backed local defaults. Start from `.env.example`:
 
 ```bash
-.env
-DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
+COMPOSE_PROJECT_NAME=flagforge
 PORT=3000
-
-.env.test
+DATABASE_PORT=5432
+DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
+TEST_DATABASE_PORT=5433
 TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5433/flagforge_test
 ```
 
-`DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`.
+`COMPOSE_PROJECT_NAME` is read by Docker Compose on the host to isolate project resources such as containers, networks, and volumes. It is not a container runtime setting.
+
+`DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`, even though the `TEST_` values live in the same local `.env` file.
+
+Keep `DATABASE_URL` and `TEST_DATABASE_URL` explicit. If you change `DATABASE_PORT` or `TEST_DATABASE_PORT`, update the matching URL port as well; local dotenv loading does not compose URL values from other variables.
+
+For parallel worktrees, use distinct Compose project names and host ports in each worktree's `.env`:
+
+```bash
+COMPOSE_PROJECT_NAME=flagforge-exp-17
+PORT=3017
+DATABASE_PORT=5542
+DATABASE_URL=postgres://flagforge:flagforge@localhost:5542/flagforge
+TEST_DATABASE_PORT=5543
+TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5543/flagforge_test
+```
 
 ## Local Workflow
 
@@ -71,7 +86,7 @@ npm run openapi:preview
 
 The preview command writes `/tmp/flagforge-openapi.html`, which can be opened in a browser. Keep OpenSpec specs, tests, and `docs/api/openapi.yaml` aligned whenever API behavior changes.
 
-The PostgreSQL integration harness loads `.env.test`, applies migrations to `flagforge_test`, and truncates `audit_events` and `feature_flags` before each test.
+The PostgreSQL integration harness loads `.env`, requires `TEST_DATABASE_URL`, applies migrations to `flagforge_test`, and truncates `audit_events` and `feature_flags` before each test.
 
 ## Docker Workflow
 
@@ -112,11 +127,11 @@ make verify
 
 ## Troubleshooting
 
-If migrations cannot connect, confirm PostgreSQL is healthy with `docker compose ps postgres` and verify `DATABASE_URL` points at `localhost:5432` for host commands.
+If migrations cannot connect, confirm PostgreSQL is healthy with `docker compose ps postgres` and verify `DATABASE_URL` points at the host and port selected by `DATABASE_PORT` for host commands.
 
-If PostgreSQL integration tests report that `TEST_DATABASE_URL` is required, confirm `.env.test` exists or export `TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5433/flagforge_test`.
+If PostgreSQL integration tests report that `TEST_DATABASE_URL` is required, confirm `.env` exists or export `TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5433/flagforge_test`.
 
-If PostgreSQL integration tests fail to connect, confirm the test database is healthy with `docker compose ps postgres-test` and verify no other local service is using host port `5433`.
+If PostgreSQL integration tests fail to connect, confirm the test database is healthy with `docker compose ps postgres-test` and verify no other local service is using the host port selected by `TEST_DATABASE_PORT`.
 
 If the Compose app cannot connect to PostgreSQL, confirm the app service uses the Compose-network hostname `postgres` in `DATABASE_URL`.
 
