@@ -59,7 +59,7 @@ The preview command writes `/tmp/flagforge-openapi.html`; open that file in a br
 
 ## Local PostgreSQL
 
-Create a local `.env` from `.env.example` for host runtime and migration defaults. It provides the development database URL and port used by `npm run db:migrate` and `npm run dev`.
+Create a local `.env` from `.env.example` for host runtime, migration, Compose, and PostgreSQL integration test defaults. It provides `PORT`, `DATABASE_PORT`, `DATABASE_URL`, `TEST_DATABASE_PORT`, `TEST_DATABASE_URL`, and `COMPOSE_PROJECT_NAME`.
 
 Start the local development database with Docker Compose:
 
@@ -67,7 +67,7 @@ Start the local development database with Docker Compose:
 docker compose up -d postgres
 ```
 
-The development database uses `postgres://flagforge:flagforge@localhost:5432/flagforge`.
+The development database uses `postgres://flagforge:flagforge@localhost:5432/flagforge` by default. Override `DATABASE_PORT` for a different host port and update `DATABASE_URL` to the same port.
 
 Apply migrations before starting the API:
 
@@ -76,14 +76,14 @@ npm run db:migrate
 npm run dev
 ```
 
-PostgreSQL integration tests are destructive for the database named by `TEST_DATABASE_URL`: the harness truncates feature flags and audit events before each test. Start the isolated test service and use the committed `.env.test` defaults:
+PostgreSQL integration tests are destructive for the database named by `TEST_DATABASE_URL`: the harness truncates feature flags and audit events before each test. Start the isolated test service and use the `TEST_` values from root `.env`:
 
 ```bash
 docker compose up -d postgres-test
 npm run test:postgres
 ```
 
-`.env.test` points at `postgres://flagforge:flagforge@localhost:5433/flagforge_test`. The integration harness requires `TEST_DATABASE_URL` and never falls back to `DATABASE_URL`.
+`TEST_DATABASE_URL` points at `postgres://flagforge:flagforge@localhost:5433/flagforge_test` by default. Override `TEST_DATABASE_PORT` for a different host port and update `TEST_DATABASE_URL` to the same port. The integration harness requires `TEST_DATABASE_URL` and never falls back to `DATABASE_URL`.
 
 ## Docker
 
@@ -102,7 +102,7 @@ docker compose up -d app
 curl --fail http://localhost:3000/health
 ```
 
-The app container uses `DATABASE_URL=postgres://flagforge:flagforge@postgres:5432/flagforge` inside the Compose network and exposes the API on port `3000` by default. Migrations are intentionally not run by the app container startup command.
+The app container uses `DATABASE_URL=postgres://flagforge:flagforge@postgres:5432/flagforge` inside the Compose network and exposes the API on port `3000` by default. Override the API host port with `PORT`. Compose also honors `DATABASE_PORT` and `TEST_DATABASE_PORT` for the runtime and test PostgreSQL host ports. Migrations are intentionally not run by the app container startup command.
 
 ## Make Targets
 
