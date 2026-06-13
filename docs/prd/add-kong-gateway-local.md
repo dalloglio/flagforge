@@ -47,14 +47,33 @@ and validate.
 - OpenSpec artifacts must define local Kong Gateway behavior before
   implementation.
 - Kong must be able to route local traffic to the FlagForge API.
+- The first local Kong integration must use Docker Compose with Kong configured
+  through declarative DB-less configuration.
+- Kong configuration must live in a source-controlled infrastructure-oriented
+  directory, such as `infra/kong/`, so future kind, Helm, or GitOps work can
+  reuse or adapt it without coupling the Express app to Kong.
 - Direct access to the app must continue to behave as it does today unless the
   OpenSpec change explicitly changes that behavior.
 - Gateway configuration must be source-controlled, documented, and reproducible.
 - Local startup documentation must explain how to run the app and Kong together.
 - Local validation documentation must explain how to prove traffic reaches
   FlagForge through Kong.
-- A smoke check must demonstrate successful gateway routing where feasible in
-  local tooling or CI.
+- A Docker-only smoke check, such as `make smoke-gateway`, must demonstrate
+  successful gateway routing to the API through Kong.
+- Gateway smoke checks must remain outside `npm run verify` because `verify` is
+  the host-only completion gate and must not require Docker.
+- Kong must expose the same FlagForge HTTP API surface as the direct app for the
+  first implementation, including flag management, evaluation, audit-log, and
+  operational endpoints.
+- Kong must not add authentication, authorization, rate limiting, or production
+  hardening in this issue.
+- API key protection remains owned by issue #18 and must be enforced by the API,
+  not by Kong, for this increment.
+- The Kong proxy must use host port `8000` by default and allow override through
+  an environment variable such as `KONG_PROXY_PORT`.
+- Kong Admin API must not be exposed on the host by default. If local
+  implementation work requires it, exposure must be opt-in, local-only, and
+  documented separately.
 - The API code must not import, configure, or depend on Kong.
 - Gateway configuration must avoid introducing admin authentication, rate
   limiting, cloud deployment, Helm, kind, or Argo CD scope.
@@ -76,18 +95,32 @@ and validate.
 - Adding gateway config before admin auth is complete can expose the same
   unauthenticated admin surface through a second entrypoint if route scope is not
   reviewed.
+- Exposing Kong Admin API on the host by default can create unnecessary local
+  risk and imply a management workflow outside this issue's scope.
+
+## Resolved decisions
+
+- The first local Kong integration uses Docker Compose and Kong DB-less
+  declarative configuration.
+- Kong configuration lives in an infrastructure-oriented directory, such as
+  `infra/kong/`, rather than in application source.
+- The PRD prepares for future kind, Helm, and GitOps reuse by file organization
+  only; it does not implement those platform layers.
+- Gateway smoke validation is a Docker-only command or Makefile target and is
+  not part of `npm run verify`.
+- Kong routes the same FlagForge HTTP API surface as the direct app for this
+  increment.
+- Kong does not implement authentication, authorization, rate limiting, or
+  production hardening in this issue.
+- Issue #18 owns API key protection. This issue only adds a local gateway
+  entrypoint.
+- Kong proxy host port defaults to `8000` and is configurable with an environment
+  variable such as `KONG_PROXY_PORT`.
+- Kong Admin API is not exposed on the host by default.
 
 ## Open questions
 
-- Owner: Staff/SRE. Should the first local Kong integration run only through
-  Docker Compose, or should it also prepare a directory layout for later kind and
-  Helm work?
-- Owner: QA/SRE. Should gateway smoke checks be part of `npm run verify`, a
-  Makefile target, or an explicit Docker-only validation command?
-- Owner: Security. Which routes should be exposed through Kong in the first
-  implementation while admin authentication is being handled separately?
-- Owner: Developer. What host ports should Kong use to avoid conflicts with the
-  existing app and PostgreSQL Compose defaults?
+None.
 
 ## Source references
 
