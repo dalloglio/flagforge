@@ -11,6 +11,14 @@ import {
   type FlagUseCases,
 } from "../application/flag-use-cases.js";
 import {
+  createHttpMetricsMiddleware,
+  createLivenessResponse,
+  createNotReadyResponse,
+  createOperationalMetrics,
+  createReadyResponse,
+  type ReadinessCheck,
+} from "./operational.js";
+import {
   createFlagSchema,
   evaluationRequestSchema,
   flagKeySchema,
@@ -29,10 +37,12 @@ export type AppDependencies = {
   auditLog?: AuditLogRepository;
   eventIdGenerator?: EventIdGenerator;
   clock?: Clock;
+  readinessCheck?: ReadinessCheck;
 };
 
 export function createApp(dependencies: AppDependencies = {}) {
   const app = express();
+  const readinessCheck = dependencies.readinessCheck ?? (async () => {});
   const useCases =
     dependencies.useCases ??
     createFlagUseCases(
@@ -43,11 +53,26 @@ export function createApp(dependencies: AppDependencies = {}) {
         clock: dependencies.clock,
       }),
     );
+  const metrics = createOperationalMetrics();
 
   app.use(express.json());
+  app.use(createHttpMetricsMiddleware(metrics));
 
   app.get("/health", (_request, response) => {
-    response.status(200).json({ status: "ok" });
+    response.status(200).json(createLivenessResponse());
+  });
+
+  app.get("/healthz", (_request, response) => {
+    response.status(200).json(createLivenessResponse());
+  });
+
+  app.get("/readyz", async (_request, response) => {
+    try {
+      await readinessCheck();
+      return response.status(200).json(createReadyResponse());
+    } catch {
+      return response.status(503).json(createNotReadyResponse());
+    }
   });
 
   app.post("/flags", async (request, response) => {
@@ -177,6 +202,13 @@ export function createApp(dependencies: AppDependencies = {}) {
     }
 
     return response.status(200).json(result);
+  });
+
+  app.get("/metrics", async (_request, response) => {
+    response
+      .status(200)
+      .type(metrics.registry.contentType)
+      .send(await metrics.registry.metrics());
   });
 
   app.use((_request, response) => {
