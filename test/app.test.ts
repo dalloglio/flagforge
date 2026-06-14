@@ -18,6 +18,48 @@ describe("FlagForge API", () => {
     expect(response.body).toEqual({ status: "ok" });
   });
 
+  it("returns liveness status without checking readiness", async () => {
+    const response = await request(app).get("/healthz");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: "ok" });
+  });
+
+  it("returns ready status when readiness succeeds", async () => {
+    const response = await request(app).get("/readyz");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "ready",
+      dependencies: {
+        postgresql: {
+          status: "available",
+        },
+      },
+    });
+  });
+
+  it("returns not ready status when readiness fails", async () => {
+    app = createTestApp({
+      readinessCheck: async () => {
+        throw new Error("database unavailable");
+      },
+    });
+
+    const response = await request(app).get("/readyz");
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      status: "not_ready",
+      dependencies: {
+        postgresql: {
+          status: "unavailable",
+        },
+      },
+    });
+    expect(JSON.stringify(response.body)).not.toContain("database unavailable");
+  });
+
   it("creates, lists, and reads a flag", async () => {
     const createResponse = await request(app).post("/flags").send({
       key: "checkout-redesign",
@@ -328,6 +370,77 @@ describe("FlagForge API", () => {
     expect(response.body.error.code).toBe("validation_error");
     expect(response.body.error.message).toBe("Invalid audit log filter");
   });
+
+  it("exposes Prometheus metrics with runtime and HTTP request observations", async () => {
+    await request(app).get("/healthz");
+    await request(app).get("/flags/checkout-redesign?include=secret");
+    await request(app).post("/flags").send({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [],
+    });
+
+    const response = await request(app).get("/metrics");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/plain");
+    expect(response.headers["content-type"]).toContain("version=0.0.4");
+    expect(response.text).toContain("process_cpu_user_seconds_total");
+    expect(response.text).toContain("# HELP http_requests_total");
+    expect(response.text).toContain(
+      'http_requests_total{method="GET",route="/healthz",status="200"}',
+    );
+    expect(response.text).toContain(
+      'http_requests_total{method="GET",route="/flags/:key",status="404"}',
+    );
+    expect(response.text).toContain(
+      'http_requests_total{method="POST",route="/flags",status="201"}',
+    );
+    expect(response.text).toContain(
+      'http_request_duration_seconds_count{method="GET",route="/healthz",status="200"}',
+    );
+    expect(response.text).not.toContain("checkout-redesign");
+    expect(response.text).not.toContain("include=secret");
+  });
+
+  it("isolates metrics between app instances", async () => {
+    await request(app).get("/healthz");
+
+    const firstMetricsResponse = await request(app).get("/metrics");
+    expect(firstMetricsResponse.text).toContain(
+      'http_requests_total{method="GET",route="/healthz",status="200"}',
+    );
+
+    const secondApp = createTestApp();
+    const secondMetricsResponse = await request(secondApp).get("/metrics");
+
+    expect(secondMetricsResponse.text).not.toContain(
+      'route="/healthz",status="200"',
+    );
+  });
+
+  it("counts malformed JSON responses without exposing request body content", async () => {
+    const secretBody = '{"key":"checkout-redesign","apiKey":"super-secret"';
+
+    const malformedResponse = await request(app)
+      .post("/flags")
+      .set("content-type", "application/json")
+      .send(secretBody);
+
+    expect(malformedResponse.status).toBe(400);
+
+    const metricsResponse = await request(app).get("/metrics");
+
+    expect(metricsResponse.text).toContain(
+      'http_requests_total{method="POST",route="unmatched",status="400"}',
+    );
+    expect(metricsResponse.text).toContain(
+      'http_request_duration_seconds_count{method="POST",route="unmatched",status="400"}',
+    );
+    expect(metricsResponse.text).not.toContain("checkout-redesign");
+    expect(metricsResponse.text).not.toContain("super-secret");
+    expect(metricsResponse.text).not.toContain("apiKey");
+  });
 });
 
 function createFlag(key: string) {
@@ -354,9 +467,13 @@ function useDeterministicAuditApp() {
   });
 }
 
-function createTestApp() {
+function createTestApp(
+  overrides: Partial<Parameters<typeof createApp>[0]> = {},
+) {
   return createApp({
     flags: new InMemoryFlagRepository(),
     auditLog: new InMemoryAuditLogRepository(),
+    readinessCheck: async () => {},
+    ...overrides,
   });
 }

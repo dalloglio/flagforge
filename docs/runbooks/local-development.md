@@ -108,6 +108,17 @@ Smoke check the running API:
 curl --fail http://localhost:${PORT:-3000}/health
 ```
 
+Verify the operational endpoints:
+
+```bash
+curl --fail http://localhost:${PORT:-3000}/healthz
+curl -i http://localhost:${PORT:-3000}/readyz
+curl -i http://localhost:${PORT:-3000}/metrics
+```
+
+`/metrics` is a Prometheus-compatible operational scrape endpoint, not a product API route.
+`/healthz` is observable only after the API process has completed startup and is serving HTTP requests. Startup PostgreSQL validation remains unchanged, so missing, invalid, or unavailable PostgreSQL configuration can still prevent the HTTP listener from starting.
+
 The Compose app service does not run migrations automatically. Keep migrations as an explicit prerequisite with `npm run db:migrate` or `make db-migrate`.
 
 ## Makefile Shortcuts

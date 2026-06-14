@@ -12,7 +12,7 @@ servers:
 security: []
 tags:
   - name: Health
-    description: Health check endpoints.
+    description: Health and readiness endpoints.
   - name: Flags
     description: Feature flag management endpoints.
   - name: Evaluation
@@ -32,7 +32,39 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthResponse"
+                $ref: "#/components/schemas/LivenessResponse"
+  /healthz:
+    get:
+      tags:
+        - Health
+      summary: Check API liveness
+      operationId: getHealthz
+      responses:
+        "200":
+          description: API process can serve requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LivenessResponse"
+  /readyz:
+    get:
+      tags:
+        - Health
+      summary: Check API readiness
+      operationId: getReadyz
+      responses:
+        "200":
+          description: API is ready to serve feature flag traffic.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: API is not ready to serve feature flag traffic.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
   /flags:
     post:
       tags:
@@ -206,7 +238,7 @@ components:
       schema:
         $ref: "#/components/schemas/FlagKey"
   schemas:
-    HealthResponse:
+    LivenessResponse:
       type: object
       additionalProperties: false
       required:
@@ -216,6 +248,39 @@ components:
           type: string
           enum:
             - ok
+    ReadinessResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - dependencies
+      properties:
+        status:
+          type: string
+          enum:
+            - ready
+            - not_ready
+        dependencies:
+          $ref: "#/components/schemas/ReadinessDependencies"
+    ReadinessDependencies:
+      type: object
+      additionalProperties: false
+      required:
+        - postgresql
+      properties:
+        postgresql:
+          $ref: "#/components/schemas/ReadinessPostgresqlDependency"
+    ReadinessPostgresqlDependency:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - available
+            - unavailable
     FlagKey:
       type: string
       minLength: 1

@@ -3,6 +3,7 @@ import "./local-env.js";
 import { createApp } from "./api/app.js";
 import { parseDatabaseConfig } from "./infrastructure/postgres/config.js";
 import { createPostgresUseCases } from "./infrastructure/postgres/dependencies.js";
+import { createPostgresReadinessCheck } from "./infrastructure/postgres/readiness.js";
 import {
   assertPostgresAvailable,
   createPostgresPool,
@@ -18,6 +19,7 @@ async function main() {
 
   const app = createApp({
     useCases: createPostgresUseCases(pool),
+    readinessCheck: createPostgresReadinessCheck(pool),
   });
 
   const server = app.listen(port, () => {
