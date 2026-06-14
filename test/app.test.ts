@@ -418,6 +418,29 @@ describe("FlagForge API", () => {
       'route="/healthz",status="200"',
     );
   });
+
+  it("counts malformed JSON responses without exposing request body content", async () => {
+    const secretBody = '{"key":"checkout-redesign","apiKey":"super-secret"';
+
+    const malformedResponse = await request(app)
+      .post("/flags")
+      .set("content-type", "application/json")
+      .send(secretBody);
+
+    expect(malformedResponse.status).toBe(400);
+
+    const metricsResponse = await request(app).get("/metrics");
+
+    expect(metricsResponse.text).toContain(
+      'http_requests_total{method="POST",route="unmatched",status="400"}',
+    );
+    expect(metricsResponse.text).toContain(
+      'http_request_duration_seconds_count{method="POST",route="unmatched",status="400"}',
+    );
+    expect(metricsResponse.text).not.toContain("checkout-redesign");
+    expect(metricsResponse.text).not.toContain("super-secret");
+    expect(metricsResponse.text).not.toContain("apiKey");
+  });
 });
 
 function createFlag(key: string) {

@@ -20,7 +20,7 @@
 - [x] 3.3 Add HTTP request count and request duration metrics with labels limited to method, route template, and status code or status class.
 - [x] 3.4 Ensure metrics never use raw URLs, query strings, path parameter values, request bodies, feature flag context values, database URLs, API keys, or secrets as labels.
 - [x] 3.5 Add `GET /metrics` returning HTTP 200 with Prometheus-compatible text output and the metrics registry content type.
-- [ ] 3.6 Register HTTP metrics before JSON body parsing so malformed JSON `400` responses are counted.
+- [x] 3.6 Register HTTP metrics before JSON body parsing so malformed JSON `400` responses are counted.
 
 ## 4. OpenAPI and Documentation
 
@@ -28,7 +28,7 @@
 - [x] 4.2 Update `docs/api/openapi.yaml` to document `GET /readyz` with HTTP 200 ready and HTTP 503 not-ready responses.
 - [x] 4.3 Add reusable OpenAPI schemas for liveness and readiness responses without documenting `GET /metrics` in OpenAPI.
 - [x] 4.4 Update README or `docs/runbooks/local-development.md` with local verification commands for `/healthz`, `/readyz`, and `/metrics`.
-- [ ] 4.5 Document that `/healthz` is only observable after successful API startup and does not change startup PostgreSQL validation.
+- [x] 4.5 Document that `/healthz` is only observable after successful API startup and does not change startup PostgreSQL validation.
 
 ## 5. Tests
 
@@ -40,7 +40,7 @@
 - [x] 5.6 Add metrics tests proving labels use route templates or stable fallback labels and do not include raw path parameter values, query strings, request bodies, or context values.
 - [x] 5.7 Add metrics tests proving metrics registry setup does not leak duplicate metric definitions or observations across tests.
 - [x] 5.8 Add OpenAPI validation coverage through the existing `npm run openapi:validate` command.
-- [ ] 5.9 Add metrics regression coverage proving malformed JSON `400` responses are counted and request body content is not exposed.
+- [x] 5.9 Add metrics regression coverage proving malformed JSON `400` responses are counted and request body content is not exposed.
 
 ## 6. Verification
 

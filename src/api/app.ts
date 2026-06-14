@@ -55,8 +55,8 @@ export function createApp(dependencies: AppDependencies = {}) {
     );
   const metrics = createOperationalMetrics();
 
-  app.use(express.json());
   app.use(createHttpMetricsMiddleware(metrics));
+  app.use(express.json());
 
   app.get("/health", (_request, response) => {
     response.status(200).json(createLivenessResponse());
