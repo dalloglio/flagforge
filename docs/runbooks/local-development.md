@@ -8,6 +8,7 @@ Use one root `.env` file for non-secret Docker-backed local defaults. Start from
 COMPOSE_PROJECT_NAME=flagforge
 PORT=3000
 ADMIN_API_KEY=dev-admin-api-key
+KONG_PROXY_PORT=8000
 DATABASE_PORT=5432
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
 TEST_DATABASE_PORT=5433
@@ -26,10 +27,11 @@ For parallel worktrees, use distinct Compose project names and host ports in eac
 COMPOSE_PROJECT_NAME=flagforge-exp-17
 PORT=3017
 ADMIN_API_KEY=dev-admin-api-key
-DATABASE_PORT=5542
-DATABASE_URL=postgres://flagforge:flagforge@localhost:5542/flagforge
-TEST_DATABASE_PORT=5543
-TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5543/flagforge_test
+KONG_PROXY_PORT=8017
+DATABASE_PORT=5417
+DATABASE_URL=postgres://flagforge:flagforge@localhost:5417/flagforge
+TEST_DATABASE_PORT=54317
+TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:54317/flagforge_test
 ```
 
 ## Local Workflow
@@ -129,6 +131,40 @@ curl -i http://localhost:${PORT:-3000}/metrics
 
 The Compose app service does not run migrations automatically. Keep migrations as an explicit prerequisite with `npm run db:migrate` or `make db-migrate`.
 
+## Local Kong Gateway
+
+Kong runs locally through Docker Compose in DB-less mode using `infra/kong/kong.yml`. It routes host traffic from the Kong proxy to the Compose `app` service. Direct app access remains available through `${PORT:-3000}`.
+
+Start the API and Kong gateway after migrations have prepared the database:
+
+```bash
+docker compose up -d postgres
+npm run db:migrate
+docker compose up -d app kong
+```
+
+Validate direct app access:
+
+```bash
+curl --fail http://localhost:${PORT:-3000}/health
+```
+
+Validate gateway access:
+
+```bash
+curl --fail http://localhost:${KONG_PROXY_PORT:-8000}/health
+make smoke-gateway
+```
+
+Override the gateway host port by setting `KONG_PROXY_PORT` before starting Compose:
+
+```bash
+KONG_PROXY_PORT=8017 docker compose up -d kong
+curl --fail http://localhost:8017/health
+```
+
+Kong Admin API ports are not published to the host by default. The local gateway workflow does not require host access to the Kong Admin API because Kong loads the checked-in declarative configuration at startup.
+
 ## Makefile Shortcuts
 
 ```bash
@@ -141,6 +177,7 @@ make build
 make docker-build
 make compose-up
 make smoke-health
+make smoke-gateway
 make verify
 ```
 
@@ -156,6 +193,10 @@ If the Compose app cannot connect to PostgreSQL, confirm the app service uses th
 
 If `/health` fails, check `docker compose logs app postgres`, confirm migrations ran successfully, and verify the expected host port with `docker compose ps`.
 
+If gateway `/health` fails but direct app `/health` works, check `docker compose ps kong`, inspect `docker compose logs kong`, and confirm `infra/kong/kong.yml` is mounted by recreating the service with `docker compose up -d --force-recreate kong`.
+
+If the gateway host port is unavailable, set `KONG_PROXY_PORT` to an unused port and restart the Kong service. Keep the direct API `PORT` and gateway `KONG_PROXY_PORT` distinct in parallel worktrees.
+
 ## Out of Scope
 
-Helm, kind, Argo CD, Kong, registry publishing, deployment, and observability remain out of scope for this change.
+Local Kong does not add authentication, authorization, rate limiting, production hardening, Helm, kind, Argo CD, cloud deployment, registry publishing, or observability.

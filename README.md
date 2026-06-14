@@ -33,6 +33,8 @@ docker build -t flagforge-api:local .
 docker compose up -d app
 curl --fail http://localhost:3000/health
 curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
+docker compose up -d kong
+curl --fail http://localhost:8000/health
 npm run openapi:validate
 npm run openapi:preview
 npm run verify
@@ -112,6 +114,17 @@ curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
 
 The app container uses `DATABASE_URL=postgres://flagforge:flagforge@postgres:5432/flagforge` inside the Compose network and exposes the API on port `3000` by default. Override the API host port with `PORT`. Compose also honors `DATABASE_PORT` and `TEST_DATABASE_PORT` for the runtime and test PostgreSQL host ports. Migrations are intentionally not run by the app container startup command.
 
+Run the local Kong gateway through Docker Compose after the app service is available:
+
+```bash
+docker compose up -d app kong
+curl --fail http://localhost:${PORT:-3000}/health
+curl --fail http://localhost:${KONG_PROXY_PORT:-8000}/health
+make smoke-gateway
+```
+
+Kong uses DB-less declarative configuration from `infra/kong/kong.yml` and routes to the Compose `app` service. Direct app access remains available through `${PORT:-3000}`. Override the gateway host port with `KONG_PROXY_PORT`; Kong defaults to `8000`. Kong Admin API ports are not published by default.
+
 ## Make Targets
 
 ```bash
@@ -124,7 +137,8 @@ make build
 make docker-build
 make compose-up
 make smoke-health
+make smoke-gateway
 make verify
 ```
 
-Helm, kind, Argo CD, Kong, registry publishing, deployment, and observability are out of scope for this repository change.
+The local Kong workflow does not add authentication, authorization, rate limiting, production hardening, Helm, kind, Argo CD, cloud deployment, registry publishing, or observability.
