@@ -32,6 +32,7 @@ npm run build
 docker build -t flagforge-api:local .
 docker compose up -d app
 curl --fail http://localhost:3000/health
+curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
 npm run openapi:validate
 npm run openapi:preview
 npm run verify
@@ -59,7 +60,13 @@ The preview command writes `/tmp/flagforge-openapi.html`; open that file in a br
 
 ## Local PostgreSQL
 
-Create a local `.env` from `.env.example` for host runtime, migration, Compose, and PostgreSQL integration test defaults. It provides `PORT`, `DATABASE_PORT`, `DATABASE_URL`, `TEST_DATABASE_PORT`, `TEST_DATABASE_URL`, and `COMPOSE_PROJECT_NAME`.
+Create a local `.env` from `.env.example` for host runtime, migration, Compose, and PostgreSQL integration test defaults. It provides `PORT`, `ADMIN_API_KEY`, `DATABASE_PORT`, `DATABASE_URL`, `TEST_DATABASE_PORT`, `TEST_DATABASE_URL`, and `COMPOSE_PROJECT_NAME`.
+
+`ADMIN_API_KEY` is required when starting the API outside tests. The checked-in example value `dev-admin-api-key` is only a non-secret local development value. Protected admin endpoints require it in the `X-Admin-API-Key` header:
+
+```bash
+curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
+```
 
 Start the local development database with Docker Compose:
 
@@ -100,6 +107,7 @@ docker compose up -d postgres
 npm run db:migrate
 docker compose up -d app
 curl --fail http://localhost:3000/health
+curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
 ```
 
 The app container uses `DATABASE_URL=postgres://flagforge:flagforge@postgres:5432/flagforge` inside the Compose network and exposes the API on port `3000` by default. Override the API host port with `PORT`. Compose also honors `DATABASE_PORT` and `TEST_DATABASE_PORT` for the runtime and test PostgreSQL host ports. Migrations are intentionally not run by the app container startup command.

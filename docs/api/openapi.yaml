@@ -71,6 +71,8 @@ paths:
         - Flags
       summary: Create a feature flag
       operationId: createFlag
+      security:
+        - AdminApiKey: []
       requestBody:
         required: true
         content:
@@ -90,6 +92,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid admin API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: A feature flag with the requested key already exists.
           content:
@@ -101,6 +109,8 @@ paths:
         - Flags
       summary: List feature flags
       operationId: listFlags
+      security:
+        - AdminApiKey: []
       responses:
         "200":
           description: Feature flags returned from oldest to newest repository order.
@@ -110,6 +120,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/FeatureFlag"
+        "401":
+          description: Missing or invalid admin API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /flags/{key}:
     parameters:
       - $ref: "#/components/parameters/FlagKeyPath"
@@ -118,6 +134,8 @@ paths:
         - Flags
       summary: Get a feature flag
       operationId: getFlag
+      security:
+        - AdminApiKey: []
       responses:
         "200":
           description: Feature flag found.
@@ -127,6 +145,12 @@ paths:
                 $ref: "#/components/schemas/FeatureFlag"
         "400":
           description: Invalid feature flag key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid admin API key.
           content:
             application/json:
               schema:
@@ -142,6 +166,8 @@ paths:
         - Flags
       summary: Update a feature flag
       operationId: updateFlag
+      security:
+        - AdminApiKey: []
       requestBody:
         required: true
         content:
@@ -161,6 +187,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid admin API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Feature flag was not found.
           content:
@@ -175,6 +207,8 @@ paths:
         - Evaluation
       summary: Evaluate a feature flag
       operationId: evaluateFlag
+      security:
+        - AdminApiKey: []
       requestBody:
         required: true
         content:
@@ -194,6 +228,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid admin API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Feature flag was not found.
           content:
@@ -206,6 +246,8 @@ paths:
         - Audit Log
       summary: List audit events
       operationId: listAuditEvents
+      security:
+        - AdminApiKey: []
       parameters:
         - name: flagKey
           in: query
@@ -228,7 +270,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid admin API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
+  securitySchemes:
+    AdminApiKey:
+      type: apiKey
+      in: header
+      name: X-Admin-API-Key
   parameters:
     FlagKeyPath:
       name: key
@@ -497,6 +550,7 @@ components:
           type: string
           enum:
             - validation_error
+            - unauthorized
             - conflict
             - not_found
             - bad_request

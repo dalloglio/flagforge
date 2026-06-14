@@ -1,5 +1,6 @@
 import "./local-env.js";
 
+import { parseAdminAuthConfig } from "./api/admin-auth.js";
 import { createApp } from "./api/app.js";
 import { parseDatabaseConfig } from "./infrastructure/postgres/config.js";
 import { createPostgresUseCases } from "./infrastructure/postgres/dependencies.js";
@@ -12,12 +13,14 @@ import {
 
 async function main() {
   const port = Number(process.env.PORT ?? 3000);
+  const adminAuth = parseAdminAuthConfig();
   const config = parseDatabaseConfig();
   const pool = createPostgresPool(config);
 
   await assertPostgresAvailable(pool);
 
   const app = createApp({
+    adminAuth,
     useCases: createPostgresUseCases(pool),
     readinessCheck: createPostgresReadinessCheck(pool),
   });
