@@ -11,8 +11,8 @@ The focus is to prove that:
 - protected administrative endpoints reject missing, invalid, and query-parameter-only API keys with the same generic `401 Unauthorized` response;
 - valid credentials preserve the existing flag management, evaluation, audit-log, validation, duplicate-key, and not-found behavior;
 - authentication failures happen before protected operations, request validation, use case execution, audit writes, or data reads;
-- `GET /health` remains public;
-- OpenAPI documents only the header API key scheme, marks protected operations, leaves health unauthenticated, and includes `401` responses;
+- `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics` remain public operational endpoints;
+- OpenAPI documents only the header API key scheme, marks protected operations, leaves documented operational endpoints unauthenticated, and includes `401` responses only for protected operations;
 - docs use non-secret local examples and do not introduce committed real secrets.
 
 Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active keys, tenant-scoped keys, SDK/client credentials, Kong, rate limiting, Kubernetes, cloud secret storage, persistence schema changes, or domain-layer authentication behavior.
@@ -38,7 +38,7 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
   - `GET /audit-log`
 - Cover query-parameter-only credentials, such as `?apiKey=...` or equivalent, and assert they are treated as unauthenticated.
 - Assert missing and invalid credentials return identical generic `401` bodies.
-- Assert `GET /health` returns `200` without credentials and remains outside OpenAPI security requirements.
+- Assert `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics` remain accessible without credentials.
 - Assert unknown routes keep their existing `404` behavior unless the implementation intentionally scopes auth before route matching for a documented protected route.
 
 ### Integration tests
@@ -52,7 +52,7 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
 - Validate `docs/api/openapi.yaml` defines an API key security scheme using header name `X-Admin-API-Key`.
 - Validate protected operations declare the admin security requirement.
 - Validate protected operations document `401` responses using the standard error response schema.
-- Validate `GET /health` does not declare the admin security requirement.
+- Validate `GET /health`, `GET /healthz`, and `GET /readyz` do not declare the admin security requirement.
 - Validate the OpenAPI contract does not document query parameter API keys.
 
 ### Manual checks
@@ -66,6 +66,9 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
 ### Happy paths
 
 - `GET /health` without `X-Admin-API-Key` returns `200` and `{ "status": "ok" }`.
+- `GET /healthz` without `X-Admin-API-Key` returns `200` and `{ "status": "ok" }`.
+- `GET /readyz` without `X-Admin-API-Key` returns the readiness result for the current dependency state rather than `401`.
+- `GET /metrics` without `X-Admin-API-Key` returns Prometheus-compatible metrics text.
 - `POST /flags` with a valid key creates a flag and records the existing audit event.
 - `GET /flags` with a valid key returns the existing list response.
 - `GET /flags/{key}` with a valid key returns an existing flag and still returns `404` for a missing flag.

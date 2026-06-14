@@ -9,7 +9,7 @@ Issue #18 and the PRD require a first administrative authentication boundary bef
 **Goals:**
 
 - Enforce `X-Admin-API-Key` authentication for `POST /flags`, `GET /flags`, `GET /flags/{key}`, `PATCH /flags/{key}`, `POST /flags/{key}/evaluate`, and `GET /audit-log`.
-- Keep `GET /health` and future operational endpoints unauthenticated.
+- Keep `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics` unauthenticated.
 - Load the configured admin key from `ADMIN_API_KEY`.
 - Fail startup outside tests when `ADMIN_API_KEY` is missing.
 - Return the same generic HTTP `401 Unauthorized` response for missing and invalid keys without exposing sensitive details.
@@ -79,12 +79,12 @@ Alternative considered: documenting auth only in README. Rejected because client
 - Protecting `POST /flags/{key}/evaluate` is stricter than a future client SDK model. Mitigation: keep this first boundary explicit and revisit separate client/evaluation credentials in a future OpenSpec change.
 - Startup failure can make local development less convenient. Mitigation: document `.env` configuration and provide non-secret example values in `.env.example` or README.
 - String comparison can leak timing information in high-threat scenarios. Mitigation: use a simple, well-contained comparison appropriate for the current local platform level, and avoid logging secret values; stronger secret management can be introduced by a future security change.
-- Applying middleware too broadly could protect operational endpoints accidentally. Mitigation: attach auth only to the specified admin routes and add regression coverage for `GET /health`.
+- Applying middleware too broadly could protect operational endpoints accidentally. Mitigation: attach auth only to the specified admin routes and add regression coverage for `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics`.
 
 ## Migration Plan
 
 1. Add explicit admin auth configuration parsing and startup validation.
-2. Add the API-boundary authentication guard and apply it to the protected endpoint list.
+2. Add the API-boundary authentication guard and apply it to the protected endpoint list without wrapping operational health, readiness, or metrics routes.
 3. Update API tests to include valid credentials for existing protected-route success cases and add missing/invalid credential coverage.
 4. Update OpenAPI and README or runbook documentation.
 5. Run focused tests, OpenAPI validation, OpenSpec validation, and `npm run verify`.

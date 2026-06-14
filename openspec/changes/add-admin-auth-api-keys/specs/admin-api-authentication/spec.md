@@ -59,12 +59,27 @@ The system SHALL require admin API key authentication for `POST /flags`, `GET /f
 
 ### Requirement: Operational endpoints remain unauthenticated
 
-The system SHALL keep operational endpoints, including `GET /health`, future liveness/readiness endpoints, and metrics endpoints, accessible without the admin API key.
+The system SHALL keep operational endpoints `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics` accessible without the admin API key.
 
 #### Scenario: Health endpoint remains public
 
 - **WHEN** a client sends `GET /health` without `X-Admin-API-Key`
 - **THEN** the system responds with HTTP 200 and the health response
+
+#### Scenario: Liveness endpoint remains public
+
+- **WHEN** a client sends `GET /healthz` without `X-Admin-API-Key`
+- **THEN** the system responds with HTTP 200 and the liveness response
+
+#### Scenario: Readiness endpoint remains public
+
+- **WHEN** a client sends `GET /readyz` without `X-Admin-API-Key`
+- **THEN** the system responds with the current readiness result and not with an authentication failure
+
+#### Scenario: Metrics endpoint remains public
+
+- **WHEN** a client sends `GET /metrics` without `X-Admin-API-Key`
+- **THEN** the system responds with Prometheus-compatible metrics text and not with an authentication failure
 
 ### Requirement: Authentication failure secrecy
 

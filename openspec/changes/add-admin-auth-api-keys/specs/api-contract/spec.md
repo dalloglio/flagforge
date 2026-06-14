@@ -23,10 +23,10 @@ The OpenAPI contract SHALL mark `POST /flags`, `GET /flags`, `GET /flags/{key}`,
 - **WHEN** a developer inspects the OpenAPI operations for protected administrative endpoints
 - **THEN** each operation declares the admin API key security requirement
 
-#### Scenario: Health operation remains unauthenticated in OpenAPI
+#### Scenario: Operational health operations remain unauthenticated in OpenAPI
 
-- **WHEN** a developer inspects the OpenAPI operation for `GET /health`
-- **THEN** the operation does not require the admin API key
+- **WHEN** a developer inspects the OpenAPI operations for `GET /health`, `GET /healthz`, and `GET /readyz`
+- **THEN** those operations do not require the admin API key
 
 ### Requirement: OpenAPI documents authentication failure responses
 
