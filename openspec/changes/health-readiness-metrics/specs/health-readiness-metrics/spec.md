@@ -81,6 +81,13 @@ The system SHALL expose Prometheus-compatible operational metrics for local scra
 - **AND** the metrics response includes an HTTP request duration metric
 - **AND** those metrics use only low-cardinality labels such as HTTP method, route template, and status code or status class
 
+#### Scenario: Malformed JSON responses are counted
+
+- **WHEN** a client sends malformed JSON to an endpoint that accepts a JSON request body
+- **THEN** the system responds with HTTP 400
+- **AND** a subsequent `GET /metrics` response includes an HTTP request count metric observation for the malformed JSON response
+- **AND** the observation uses only low-cardinality labels such as HTTP method, stable route or fallback label, and status code or status class
+
 #### Scenario: Metrics labels do not leak sensitive or high-cardinality values
 
 - **WHEN** the system records HTTP metrics for requests containing path parameters, query strings, request bodies, feature flag evaluation context values, database URLs, API keys, or secrets
@@ -94,6 +101,12 @@ The repository SHALL document local verification steps for the operational endpo
 
 - **WHEN** a contributor reads the README or local development runbook
 - **THEN** it explains how to call `GET /healthz`, `GET /readyz`, and `GET /metrics` against a locally running API
+
+#### Scenario: Liveness startup semantics are documented
+
+- **WHEN** a contributor reads the README or local development runbook
+- **THEN** it explains that `GET /healthz` is available only after the API process has successfully started and is serving HTTP requests
+- **AND** it explains that startup PostgreSQL validation remains unchanged
 
 #### Scenario: Metrics documentation is operational
 
