@@ -7,6 +7,7 @@ FlagForge exposes administrative flag and audit operations without an applicatio
 - Add API key authentication for administrative endpoints using the `X-Admin-API-Key` request header.
 - Require one configured admin API key from `ADMIN_API_KEY`.
 - Fail application startup outside tests when `ADMIN_API_KEY` is not configured.
+- Preserve missing admin API key startup diagnostics instead of reporting them as PostgreSQL startup failures.
 - Protect `POST /flags`, `GET /flags`, `GET /flags/{key}`, `PATCH /flags/{key}`, `POST /flags/{key}/evaluate`, and `GET /audit-log`.
 - Keep operational endpoints `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics` accessible without the admin API key.
 - Return HTTP `401 Unauthorized` with a generic error response for missing or invalid admin API keys.
@@ -30,8 +31,8 @@ FlagForge exposes administrative flag and audit operations without an applicatio
 
 ## Impact
 
-- Affected API/application code: Express routing or middleware, application startup configuration, API error mapping, and test wiring.
+- Affected API/application code: Express routing or middleware, application startup configuration, runtime startup error mapping, API error mapping, and test wiring.
 - Affected public API: protected endpoints gain required `X-Admin-API-Key` authentication and `401 Unauthorized` responses; `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics` remain unauthenticated.
 - Affected docs: `docs/api/openapi.yaml`, README or runbook local configuration examples, and OpenSpec specs.
-- Affected tests: missing key, invalid key, valid key, protected endpoint matrix, startup configuration, and unaffected operational endpoint regressions.
+- Affected tests: missing key, invalid key, valid key, protected endpoint matrix, startup configuration diagnostics, and unaffected operational endpoint regressions.
 - No new runtime dependencies, persistence changes, gateway configuration, cloud secret storage, user identity model, or domain-layer dependency on authentication.

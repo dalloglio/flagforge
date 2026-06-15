@@ -13,6 +13,8 @@ The system SHALL configure the admin API key from the `ADMIN_API_KEY` environmen
 
 - **WHEN** the application starts outside tests without `ADMIN_API_KEY` configured
 - **THEN** startup fails before the API begins accepting requests
+- **AND** the startup diagnostic reports that `ADMIN_API_KEY` is required for admin API authentication
+- **AND** the startup diagnostic does not report the failure as a PostgreSQL persistence initialization problem
 
 #### Scenario: Tests can configure admin authentication explicitly
 

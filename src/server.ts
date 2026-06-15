@@ -8,8 +8,8 @@ import { createPostgresReadinessCheck } from "./infrastructure/postgres/readines
 import {
   assertPostgresAvailable,
   createPostgresPool,
-  describeDatabaseStartupError,
 } from "./infrastructure/postgres/pool.js";
+import { describeRuntimeStartupError } from "./runtime-startup.js";
 
 async function main() {
   const port = Number(process.env.PORT ?? 3000);
@@ -36,6 +36,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(describeDatabaseStartupError(error));
+  console.error(describeRuntimeStartupError(error));
   process.exitCode = 1;
 });

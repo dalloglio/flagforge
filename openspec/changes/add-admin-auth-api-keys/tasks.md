@@ -3,6 +3,8 @@
 - [x] 1.1 Add admin API key configuration parsing from `ADMIN_API_KEY` with startup failure outside tests when it is missing.
 - [x] 1.2 Wire parsed admin auth configuration into `createApp` from `src/server.ts`.
 - [x] 1.3 Add focused tests for configured startup behavior, missing runtime configuration, and explicit test configuration.
+- [x] 1.4 Add runtime startup error formatting that preserves `AdminAuthConfigError` messages, keeps database startup diagnostics unchanged, and uses a neutral runtime message for unexpected startup errors.
+- [x] 1.5 Add focused regression coverage that missing `ADMIN_API_KEY` reports the admin auth configuration message rather than `PostgreSQL persistence failed to initialize`.
 
 ## 2. API Authentication
 

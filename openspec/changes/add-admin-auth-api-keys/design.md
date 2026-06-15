@@ -12,6 +12,7 @@ Issue #18 and the PRD require a first administrative authentication boundary bef
 - Keep `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics` unauthenticated.
 - Load the configured admin key from `ADMIN_API_KEY`.
 - Fail startup outside tests when `ADMIN_API_KEY` is missing.
+- Report missing admin key startup failures with the admin configuration error message, not a PostgreSQL persistence diagnostic.
 - Return the same generic HTTP `401 Unauthorized` response for missing and invalid keys without exposing sensitive details.
 - Keep authentication enforcement near the API/application boundary.
 - Update OpenAPI, README or runbook documentation, and tests.
@@ -57,6 +58,14 @@ Rationale: production-like runtime should never start with unprotected administr
 
 Alternative considered: a committed default key for all environments. Rejected because local defaults can accidentally become treated as real secrets and weaken the security boundary.
 
+### Preserve runtime startup error categories
+
+`src/server.ts` should use a runtime startup error formatter that recognizes `AdminAuthConfigError`, database configuration errors, and PostgreSQL dependency errors. Admin auth configuration errors should return their own message, database errors should keep the existing database-specific diagnostics, and unexpected errors should use a neutral runtime startup message rather than the PostgreSQL persistence fallback.
+
+Rationale: operators running `npm run dev` or a non-Compose deployment need the missing `ADMIN_API_KEY` remediation when auth configuration fails. Formatting every startup error through the database helper makes auth failures look like PostgreSQL failures and sends operators toward the wrong fix.
+
+Alternative considered: extend `describeDatabaseStartupError` to know about admin auth. Rejected because the migration entrypoint also uses that helper for database-only commands, and coupling database diagnostics to admin auth would blur ownership.
+
 ### Use a generic `401 Unauthorized` error payload
 
 Missing and invalid keys should both return the same status, code, and message. The response must not reveal whether the key was missing or wrong and must not include configured key values or comparison details.
@@ -78,16 +87,18 @@ Alternative considered: documenting auth only in README. Rejected because client
 - Existing local scripts and tests that call protected endpoints without headers will fail. Mitigation: update tests and README examples with a clearly non-secret development value.
 - Protecting `POST /flags/{key}/evaluate` is stricter than a future client SDK model. Mitigation: keep this first boundary explicit and revisit separate client/evaluation credentials in a future OpenSpec change.
 - Startup failure can make local development less convenient. Mitigation: document `.env` configuration and provide non-secret example values in `.env.example` or README.
+- Misclassifying startup failures can send operators toward the wrong remediation. Mitigation: add a runtime startup error formatter that preserves admin auth configuration errors separately from database diagnostics.
 - String comparison can leak timing information in high-threat scenarios. Mitigation: use a simple, well-contained comparison appropriate for the current local platform level, and avoid logging secret values; stronger secret management can be introduced by a future security change.
 - Applying middleware too broadly could protect operational endpoints accidentally. Mitigation: attach auth only to the specified admin routes and add regression coverage for `GET /health`, `GET /healthz`, `GET /readyz`, and `GET /metrics`.
 
 ## Migration Plan
 
 1. Add explicit admin auth configuration parsing and startup validation.
-2. Add the API-boundary authentication guard and apply it to the protected endpoint list without wrapping operational health, readiness, or metrics routes.
-3. Update API tests to include valid credentials for existing protected-route success cases and add missing/invalid credential coverage.
-4. Update OpenAPI and README or runbook documentation.
-5. Run focused tests, OpenAPI validation, OpenSpec validation, and `npm run verify`.
+2. Add runtime startup error formatting that reports missing `ADMIN_API_KEY` directly while preserving existing database startup diagnostics.
+3. Add the API-boundary authentication guard and apply it to the protected endpoint list without wrapping operational health, readiness, or metrics routes.
+4. Update API tests to include valid credentials for existing protected-route success cases and add missing/invalid credential coverage.
+5. Update OpenAPI and README or runbook documentation.
+6. Run focused tests, OpenAPI validation, OpenSpec validation, and `npm run verify`.
 
 Rollback is a code revert of the authentication guard, startup configuration, docs, OpenAPI, and tests. No database migration or data rollback is required.
 

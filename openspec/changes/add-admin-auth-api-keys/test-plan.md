@@ -7,6 +7,7 @@ This plan covers validation for the first FlagForge administrative authenticatio
 The focus is to prove that:
 
 - runtime startup outside tests fails when `ADMIN_API_KEY` is missing;
+- missing `ADMIN_API_KEY` startup failures report the admin auth configuration remediation rather than a PostgreSQL initialization failure;
 - tests can construct the API with explicit admin authentication configuration;
 - protected administrative endpoints reject missing, invalid, and query-parameter-only API keys with the same generic `401 Unauthorized` response;
 - valid credentials preserve the existing flag management, evaluation, audit-log, validation, duplicate-key, and not-found behavior;
@@ -22,6 +23,7 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
 ### Unit tests
 
 - Add focused configuration tests for parsing `ADMIN_API_KEY`: configured value succeeds, missing runtime value fails clearly, and test construction can provide an explicit key without global environment mutation.
+- Add focused startup error formatting tests for `AdminAuthConfigError`, existing database startup errors, and unexpected runtime startup errors.
 - Add focused API-boundary auth tests for header extraction and comparison if the implementation introduces a standalone guard/helper.
 - Verify the authentication failure response builder, if separated, returns one generic status/code/message for missing and invalid credentials.
 - Verify auth code does not import or depend on domain repositories, evaluator logic, PostgreSQL adapters, or audit event construction.
@@ -46,6 +48,7 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
 - Run the standard API suite against the app dependencies used in existing tests to prove valid credentials preserve existing behavior.
 - If PostgreSQL-backed API integration tests are present for this change, include valid admin credentials in their requests and verify no persistence behavior changes.
 - Validate startup wiring from `src/server.ts` with `ADMIN_API_KEY` configured and missing, without requiring a real secret in the repository.
+- Validate that missing `ADMIN_API_KEY` startup diagnostics mention the admin auth configuration requirement and do not mention PostgreSQL persistence initialization.
 
 ### Contract tests
 
@@ -86,6 +89,9 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
 - Authentication runs before request body validation: unauthenticated invalid create/update/evaluation payloads return `401`, not `400`.
 - Authentication runs before route parameter validation for protected flag routes: unauthenticated invalid flag keys return `401`, not `400`.
 - Authentication failures do not include the configured key, submitted key, comparison details, database details, stack traces, or missing-versus-invalid distinctions.
+- Missing `ADMIN_API_KEY` startup formatting preserves the `ADMIN_API_KEY is required for admin API authentication` message.
+- Database startup formatting still preserves database configuration and PostgreSQL dependency messages.
+- Unexpected startup errors use a neutral runtime startup message rather than a PostgreSQL-specific message.
 - Authentication failure for `POST /flags` does not create a flag or audit event.
 - Authentication failure for `PATCH /flags/{key}` does not update a flag or append an audit event.
 - Authentication failure for `POST /flags/{key}/evaluate` does not evaluate the flag or leak not-found/validation information.
@@ -95,6 +101,7 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
 ### Failure cases
 
 - Runtime startup without `ADMIN_API_KEY` outside tests fails before the API accepts requests.
+- Runtime startup without `ADMIN_API_KEY` outside tests does not log `PostgreSQL persistence failed to initialize`.
 - Protected route without credentials returns `401` and no protected operation occurs.
 - Protected route with invalid credentials returns `401` and no protected operation occurs.
 - Protected route with only query parameter credentials returns `401` and no protected operation occurs.
@@ -124,6 +131,7 @@ Out of scope: user accounts, RBAC, OAuth/OIDC, API key rotation, multiple active
 
 - `npm test -- --run test/app.test.ts`
 - `npm test -- --run test/postgres-config.test.ts` or a new focused auth configuration test file if added
+- `npm test -- --run test/admin-auth.test.ts` or the focused file containing runtime startup error formatter coverage
 - `npm run openapi:validate`
 - `openspec validate add-admin-auth-api-keys --strict`
 
