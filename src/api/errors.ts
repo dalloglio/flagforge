@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 
 export type ErrorCode =
   | "validation_error"
+  | "unauthorized"
   | "conflict"
   | "not_found"
   | "bad_request"

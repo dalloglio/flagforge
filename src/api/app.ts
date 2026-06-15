@@ -29,9 +29,11 @@ import {
   DuplicateFlagError,
   type FlagRepository,
 } from "../domain/repository.js";
+import { createAdminAuthGuard, type AdminAuthConfig } from "./admin-auth.js";
 import { sendError, zodDetails } from "./errors.js";
 
 export type AppDependencies = {
+  adminAuth?: AdminAuthConfig;
   useCases?: FlagUseCases;
   flags?: FlagRepository;
   auditLog?: AuditLogRepository;
@@ -43,6 +45,16 @@ export type AppDependencies = {
 export function createApp(dependencies: AppDependencies = {}) {
   const app = express();
   const readinessCheck = dependencies.readinessCheck ?? (async () => {});
+  const adminAuth =
+    dependencies.adminAuth ??
+    (process.env.NODE_ENV === "test"
+      ? { apiKey: "dev-admin-api-key" }
+      : undefined);
+  if (!adminAuth) {
+    throw new Error("adminAuth is required outside tests");
+  }
+  const requireAdminAuth = createAdminAuthGuard(adminAuth);
+  const parseJson = express.json();
   const useCases =
     dependencies.useCases ??
     createFlagUseCases(
@@ -56,7 +68,6 @@ export function createApp(dependencies: AppDependencies = {}) {
   const metrics = createOperationalMetrics();
 
   app.use(createHttpMetricsMiddleware(metrics));
-  app.use(express.json());
 
   app.get("/health", (_request, response) => {
     response.status(200).json(createLivenessResponse());
@@ -75,7 +86,7 @@ export function createApp(dependencies: AppDependencies = {}) {
     }
   });
 
-  app.post("/flags", async (request, response) => {
+  app.post("/flags", requireAdminAuth, parseJson, async (request, response) => {
     const parsed = createFlagSchema.safeParse(request.body);
     if (!parsed.success) {
       return sendError(
@@ -99,11 +110,11 @@ export function createApp(dependencies: AppDependencies = {}) {
     }
   });
 
-  app.get("/flags", async (_request, response) => {
+  app.get("/flags", requireAdminAuth, async (_request, response) => {
     response.status(200).json(await useCases.listFlags());
   });
 
-  app.get("/audit-log", async (request, response) => {
+  app.get("/audit-log", requireAdminAuth, async (request, response) => {
     const rawFlagKey = request.query.flagKey;
     if (rawFlagKey === undefined) {
       return response.status(200).json(await useCases.listAuditEvents());
@@ -125,7 +136,7 @@ export function createApp(dependencies: AppDependencies = {}) {
       .json(await useCases.listAuditEvents({ flagKey: parsed.data }));
   });
 
-  app.get("/flags/:key", async (request, response) => {
+  app.get("/flags/:key", requireAdminAuth, async (request, response) => {
     const key = parseKey(request, response);
     if (!key) {
       return;
@@ -144,65 +155,75 @@ export function createApp(dependencies: AppDependencies = {}) {
     return response.status(200).json(flag);
   });
 
-  app.patch("/flags/:key", async (request, response) => {
-    const key = parseKey(request, response);
-    if (!key) {
-      return;
-    }
+  app.patch(
+    "/flags/:key",
+    requireAdminAuth,
+    parseJson,
+    async (request, response) => {
+      const key = parseKey(request, response);
+      if (!key) {
+        return;
+      }
 
-    const parsed = updateFlagSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return sendError(
-        response,
-        400,
-        "validation_error",
-        "Invalid feature flag update payload",
-        zodDetails(parsed.error),
-      );
-    }
+      const parsed = updateFlagSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return sendError(
+          response,
+          400,
+          "validation_error",
+          "Invalid feature flag update payload",
+          zodDetails(parsed.error),
+        );
+      }
 
-    const updated = await useCases.updateFlag(key, parsed.data);
-    if (!updated) {
-      return sendError(
-        response,
-        404,
-        "not_found",
-        `Feature flag '${key}' was not found`,
-      );
-    }
+      const updated = await useCases.updateFlag(key, parsed.data);
+      if (!updated) {
+        return sendError(
+          response,
+          404,
+          "not_found",
+          `Feature flag '${key}' was not found`,
+        );
+      }
 
-    return response.status(200).json(updated);
-  });
+      return response.status(200).json(updated);
+    },
+  );
 
-  app.post("/flags/:key/evaluate", async (request, response) => {
-    const key = parseKey(request, response);
-    if (!key) {
-      return;
-    }
+  app.post(
+    "/flags/:key/evaluate",
+    requireAdminAuth,
+    parseJson,
+    async (request, response) => {
+      const key = parseKey(request, response);
+      if (!key) {
+        return;
+      }
 
-    const parsed = evaluationRequestSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return sendError(
-        response,
-        400,
-        "validation_error",
-        "Invalid evaluation payload",
-        zodDetails(parsed.error),
-      );
-    }
+      const parsed = evaluationRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return sendError(
+          response,
+          400,
+          "validation_error",
+          "Invalid evaluation payload",
+          zodDetails(parsed.error),
+        );
+      }
 
-    const result = await useCases.evaluateFlag(key, parsed.data.context);
-    if (!result) {
-      return sendError(
-        response,
-        404,
-        "not_found",
-        `Feature flag '${key}' was not found`,
-      );
-    }
+      const result = await useCases.evaluateFlag(key, parsed.data.context);
+      if (!result) {
+        return sendError(
+          response,
+          404,
+          "not_found",
+          `Feature flag '${key}' was not found`,
+        );
+      }
 
-    return response.status(200).json(result);
-  });
+      return response.status(200).json(result);
+    },
+  );
 
   app.get("/metrics", async (_request, response) => {
     response

@@ -7,6 +7,7 @@ Use one root `.env` file for non-secret Docker-backed local defaults. Start from
 ```bash
 COMPOSE_PROJECT_NAME=flagforge
 PORT=3000
+ADMIN_API_KEY=dev-admin-api-key
 DATABASE_PORT=5432
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
 TEST_DATABASE_PORT=5433
@@ -15,7 +16,7 @@ TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5433/flagforge_test
 
 `COMPOSE_PROJECT_NAME` is read by Docker Compose on the host to isolate project resources such as containers, networks, and volumes. It is not a container runtime setting.
 
-`DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`, even though the `TEST_` values live in the same local `.env` file.
+`ADMIN_API_KEY` is required when starting the API outside tests. Use a non-secret local value such as `dev-admin-api-key`; protected admin endpoints accept it only through the `X-Admin-API-Key` request header. `DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`, even though the `TEST_` values live in the same local `.env` file.
 
 Keep `DATABASE_URL` and `TEST_DATABASE_URL` explicit. If you change `DATABASE_PORT` or `TEST_DATABASE_PORT`, update the matching URL port as well; local dotenv loading does not compose URL values from other variables.
 
@@ -24,6 +25,7 @@ For parallel worktrees, use distinct Compose project names and host ports in eac
 ```bash
 COMPOSE_PROJECT_NAME=flagforge-exp-17
 PORT=3017
+ADMIN_API_KEY=dev-admin-api-key
 DATABASE_PORT=5542
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5542/flagforge
 TEST_DATABASE_PORT=5543
@@ -54,6 +56,12 @@ Start the API on the host:
 
 ```bash
 npm run dev
+```
+
+Call protected endpoints with the local admin key:
+
+```bash
+curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/flags
 ```
 
 Run checks:

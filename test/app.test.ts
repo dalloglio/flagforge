@@ -4,6 +4,15 @@ import { createApp } from "../src/api/app.js";
 import { InMemoryAuditLogRepository } from "../src/domain/audit-log.js";
 import { InMemoryFlagRepository } from "../src/domain/repository.js";
 
+const TEST_ADMIN_API_KEY = "dev-admin-api-key";
+const INVALID_ADMIN_API_KEY = "wrong-admin-api-key";
+const AUTH_ERROR = {
+  error: {
+    code: "unauthorized",
+    message: "Valid admin API key is required",
+  },
+};
+
 let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
@@ -61,7 +70,7 @@ describe("FlagForge API", () => {
   });
 
   it("creates, lists, and reads a flag", async () => {
-    const createResponse = await request(app).post("/flags").send({
+    const createResponse = await adminPost("/flags").send({
       key: "checkout-redesign",
       enabled: true,
       description: "Roll out the new checkout",
@@ -76,24 +85,22 @@ describe("FlagForge API", () => {
       rules: [],
     });
 
-    const listResponse = await request(app).get("/flags");
+    const listResponse = await adminGet("/flags");
     expect(listResponse.status).toBe(200);
     expect(listResponse.body).toEqual([createResponse.body]);
 
-    const readResponse = await request(app).get("/flags/checkout-redesign");
+    const readResponse = await adminGet("/flags/checkout-redesign");
     expect(readResponse.status).toBe(200);
     expect(readResponse.body).toEqual(createResponse.body);
   });
 
   it("creates a flag with rollout configuration", async () => {
-    const response = await request(app)
-      .post("/flags")
-      .send({
-        key: "checkout-redesign",
-        enabled: true,
-        rules: [],
-        rollout: { percentage: 25, attribute: "userId" },
-      });
+    const response = await adminPost("/flags").send({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [],
+      rollout: { percentage: 25, attribute: "userId" },
+    });
 
     expect(response.status).toBe(201);
     expect(response.body).toEqual({
@@ -107,13 +114,11 @@ describe("FlagForge API", () => {
   it("updates a flag without allowing key changes", async () => {
     await createFlag("checkout-redesign");
 
-    const response = await request(app)
-      .patch("/flags/checkout-redesign")
-      .send({
-        enabled: false,
-        description: "Paused rollout",
-        rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
-      });
+    const response = await adminPatch("/flags/checkout-redesign").send({
+      enabled: false,
+      description: "Paused rollout",
+      rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
+    });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -123,12 +128,12 @@ describe("FlagForge API", () => {
       rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
     });
 
-    const keyChangeResponse = await request(app)
-      .patch("/flags/checkout-redesign")
-      .send({
+    const keyChangeResponse = await adminPatch("/flags/checkout-redesign").send(
+      {
         key: "other-flag",
         enabled: true,
-      });
+      },
+    );
 
     expect(keyChangeResponse.status).toBe(400);
     expect(keyChangeResponse.body.error.code).toBe("validation_error");
@@ -137,11 +142,9 @@ describe("FlagForge API", () => {
   it("updates a flag with rollout configuration", async () => {
     await createFlag("checkout-redesign");
 
-    const response = await request(app)
-      .patch("/flags/checkout-redesign")
-      .send({
-        rollout: { percentage: 50, attribute: "accountId" },
-      });
+    const response = await adminPatch("/flags/checkout-redesign").send({
+      rollout: { percentage: 50, attribute: "accountId" },
+    });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -153,19 +156,15 @@ describe("FlagForge API", () => {
   });
 
   it("evaluates an existing flag", async () => {
-    await request(app)
-      .post("/flags")
-      .send({
-        key: "checkout-redesign",
-        enabled: true,
-        rules: [{ attribute: "country", operator: "in", values: ["BR", "US"] }],
-      });
+    await adminPost("/flags").send({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [{ attribute: "country", operator: "in", values: ["BR", "US"] }],
+    });
 
-    const response = await request(app)
-      .post("/flags/checkout-redesign/evaluate")
-      .send({
-        context: { country: "BR" },
-      });
+    const response = await adminPost("/flags/checkout-redesign/evaluate").send({
+      context: { country: "BR" },
+    });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -176,7 +175,7 @@ describe("FlagForge API", () => {
   });
 
   it("rejects invalid create payloads", async () => {
-    const response = await request(app).post("/flags").send({
+    const response = await adminPost("/flags").send({
       key: "",
       enabled: "yes",
     });
@@ -187,14 +186,12 @@ describe("FlagForge API", () => {
   });
 
   it("rejects invalid rollout create payloads", async () => {
-    const response = await request(app)
-      .post("/flags")
-      .send({
-        key: "checkout-redesign",
-        enabled: true,
-        rules: [],
-        rollout: { percentage: 101, attribute: "" },
-      });
+    const response = await adminPost("/flags").send({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [],
+      rollout: { percentage: 101, attribute: "" },
+    });
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("validation_error");
@@ -210,19 +207,19 @@ describe("FlagForge API", () => {
   });
 
   it("returns not found for missing read, update, and evaluation requests", async () => {
-    const readResponse = await request(app).get("/flags/missing");
+    const readResponse = await adminGet("/flags/missing");
     expect(readResponse.status).toBe(404);
     expect(readResponse.body.error.code).toBe("not_found");
 
-    const updateResponse = await request(app)
-      .patch("/flags/missing")
-      .send({ enabled: false });
+    const updateResponse = await adminPatch("/flags/missing").send({
+      enabled: false,
+    });
     expect(updateResponse.status).toBe(404);
     expect(updateResponse.body.error.code).toBe("not_found");
 
-    const evaluateResponse = await request(app)
-      .post("/flags/missing/evaluate")
-      .send({ context: {} });
+    const evaluateResponse = await adminPost("/flags/missing/evaluate").send({
+      context: {},
+    });
     expect(evaluateResponse.status).toBe(404);
     expect(evaluateResponse.body.error.code).toBe("not_found");
   });
@@ -230,17 +227,17 @@ describe("FlagForge API", () => {
   it("rejects invalid update and evaluation payloads", async () => {
     await createFlag("checkout-redesign");
 
-    const updateResponse = await request(app)
-      .patch("/flags/checkout-redesign")
-      .send({});
+    const updateResponse = await adminPatch("/flags/checkout-redesign").send(
+      {},
+    );
     expect(updateResponse.status).toBe(400);
     expect(updateResponse.body.error.code).toBe("validation_error");
 
-    const evaluateResponse = await request(app)
-      .post("/flags/checkout-redesign/evaluate")
-      .send({
-        context: { plan: null },
-      });
+    const evaluateResponse = await adminPost(
+      "/flags/checkout-redesign/evaluate",
+    ).send({
+      context: { plan: null },
+    });
     expect(evaluateResponse.status).toBe(400);
     expect(evaluateResponse.body.error.code).toBe("validation_error");
   });
@@ -248,11 +245,9 @@ describe("FlagForge API", () => {
   it("rejects invalid rollout update payloads", async () => {
     await createFlag("checkout-redesign");
 
-    const response = await request(app)
-      .patch("/flags/checkout-redesign")
-      .send({
-        rollout: { percentage: 10.5, attribute: "userId" },
-      });
+    const response = await adminPatch("/flags/checkout-redesign").send({
+      rollout: { percentage: 10.5, attribute: "userId" },
+    });
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("validation_error");
@@ -262,7 +257,7 @@ describe("FlagForge API", () => {
   });
 
   it("lists an empty audit log", async () => {
-    const response = await request(app).get("/audit-log");
+    const response = await adminGet("/audit-log");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
@@ -271,24 +266,20 @@ describe("FlagForge API", () => {
   it("records audit events for successful create and update requests", async () => {
     useDeterministicAuditApp();
 
-    const createResponse = await request(app)
-      .post("/flags")
-      .send({
-        key: "checkout-redesign",
-        enabled: true,
-        rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
-      });
+    const createResponse = await adminPost("/flags").send({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [{ attribute: "plan", operator: "equals", value: "pro" }],
+    });
     expect(createResponse.status).toBe(201);
 
-    const updateResponse = await request(app)
-      .patch("/flags/checkout-redesign")
-      .send({
-        enabled: false,
-        description: "Paused rollout",
-      });
+    const updateResponse = await adminPatch("/flags/checkout-redesign").send({
+      enabled: false,
+      description: "Paused rollout",
+    });
     expect(updateResponse.status).toBe(200);
 
-    const response = await request(app).get("/audit-log");
+    const response = await adminGet("/audit-log");
     expect(response.status).toBe(200);
     expect(response.body).toEqual([
       {
@@ -313,7 +304,7 @@ describe("FlagForge API", () => {
   it("does not record audit events for invalid, duplicate, or not-found mutations", async () => {
     useDeterministicAuditApp();
 
-    const invalidCreateResponse = await request(app).post("/flags").send({
+    const invalidCreateResponse = await adminPost("/flags").send({
       key: "",
       enabled: true,
       rules: [],
@@ -325,17 +316,17 @@ describe("FlagForge API", () => {
     const duplicateResponse = await createFlag("checkout-redesign");
     expect(duplicateResponse.status).toBe(409);
 
-    const invalidUpdateResponse = await request(app)
-      .patch("/flags/checkout-redesign")
-      .send({});
+    const invalidUpdateResponse = await adminPatch(
+      "/flags/checkout-redesign",
+    ).send({});
     expect(invalidUpdateResponse.status).toBe(400);
 
-    const notFoundUpdateResponse = await request(app)
-      .patch("/flags/missing")
-      .send({ enabled: false });
+    const notFoundUpdateResponse = await adminPatch("/flags/missing").send({
+      enabled: false,
+    });
     expect(notFoundUpdateResponse.status).toBe(404);
 
-    const response = await request(app).get("/audit-log");
+    const response = await adminGet("/audit-log");
     expect(response.status).toBe(200);
     expect(response.body).toHaveLength(1);
     expect(response.body[0]).toMatchObject({
@@ -351,9 +342,7 @@ describe("FlagForge API", () => {
     await createFlag("checkout-redesign");
     await createFlag("pricing-page");
 
-    const response = await request(app).get(
-      "/audit-log?flagKey=checkout-redesign",
-    );
+    const response = await adminGet("/audit-log?flagKey=checkout-redesign");
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveLength(1);
@@ -364,7 +353,7 @@ describe("FlagForge API", () => {
   });
 
   it("rejects invalid audit log filters", async () => {
-    const response = await request(app).get("/audit-log?flagKey=");
+    const response = await adminGet("/audit-log?flagKey=");
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("validation_error");
@@ -373,8 +362,8 @@ describe("FlagForge API", () => {
 
   it("exposes Prometheus metrics with runtime and HTTP request observations", async () => {
     await request(app).get("/healthz");
-    await request(app).get("/flags/checkout-redesign?include=secret");
-    await request(app).post("/flags").send({
+    await adminGet("/flags/checkout-redesign?include=secret");
+    await adminPost("/flags").send({
       key: "checkout-redesign",
       enabled: true,
       rules: [],
@@ -424,6 +413,7 @@ describe("FlagForge API", () => {
 
     const malformedResponse = await request(app)
       .post("/flags")
+      .set("X-Admin-API-Key", TEST_ADMIN_API_KEY)
       .set("content-type", "application/json")
       .send(secretBody);
 
@@ -432,19 +422,129 @@ describe("FlagForge API", () => {
     const metricsResponse = await request(app).get("/metrics");
 
     expect(metricsResponse.text).toContain(
-      'http_requests_total{method="POST",route="unmatched",status="400"}',
+      'http_requests_total{method="POST",route="/flags",status="400"}',
     );
     expect(metricsResponse.text).toContain(
-      'http_request_duration_seconds_count{method="POST",route="unmatched",status="400"}',
+      'http_request_duration_seconds_count{method="POST",route="/flags",status="400"}',
     );
     expect(metricsResponse.text).not.toContain("checkout-redesign");
     expect(metricsResponse.text).not.toContain("super-secret");
     expect(metricsResponse.text).not.toContain("apiKey");
   });
+
+  it("rejects missing, invalid, and query-only admin API keys on protected endpoints", async () => {
+    await createFlag("checkout-redesign");
+
+    const protectedRequests = [
+      () =>
+        request(app)
+          .post("/flags")
+          .send({ key: "pricing-page", enabled: true }),
+      () => request(app).get("/flags"),
+      () => request(app).get("/flags/checkout-redesign"),
+      () =>
+        request(app).patch("/flags/checkout-redesign").send({ enabled: false }),
+      () =>
+        request(app)
+          .post("/flags/checkout-redesign/evaluate")
+          .send({ context: {} }),
+      () => request(app).get("/audit-log"),
+    ];
+
+    for (const buildRequest of protectedRequests) {
+      const missingResponse = await buildRequest();
+      expect(missingResponse.status).toBe(401);
+      expect(missingResponse.body).toEqual(AUTH_ERROR);
+
+      const invalidResponse = await buildRequest().set(
+        "X-Admin-API-Key",
+        INVALID_ADMIN_API_KEY,
+      );
+      expect(invalidResponse.status).toBe(401);
+      expect(invalidResponse.body).toEqual(AUTH_ERROR);
+      expect(invalidResponse.body).toEqual(missingResponse.body);
+    }
+
+    const queryOnlyResponse = await request(app).get(
+      `/flags/checkout-redesign?apiKey=${TEST_ADMIN_API_KEY}`,
+    );
+    expect(queryOnlyResponse.status).toBe(401);
+    expect(queryOnlyResponse.body).toEqual(AUTH_ERROR);
+
+    const wrongHeaderWithCorrectQueryResponse = await request(app)
+      .get(`/flags/checkout-redesign?apiKey=${TEST_ADMIN_API_KEY}`)
+      .set("X-Admin-API-Key", INVALID_ADMIN_API_KEY);
+    expect(wrongHeaderWithCorrectQueryResponse.status).toBe(401);
+    expect(wrongHeaderWithCorrectQueryResponse.body).toEqual(AUTH_ERROR);
+
+    const validHeaderWithQueryResponse = await adminGet(
+      "/flags/checkout-redesign?apiKey=ignored",
+    );
+    expect(validHeaderWithQueryResponse.status).toBe(200);
+  });
+
+  it("authenticates protected endpoints before validation or use case execution", async () => {
+    useDeterministicAuditApp();
+    await createFlag("checkout-redesign");
+
+    const unauthenticatedInvalidCreate = await request(app)
+      .post("/flags")
+      .send({ key: "", enabled: "yes" });
+    expect(unauthenticatedInvalidCreate.status).toBe(401);
+    expect(unauthenticatedInvalidCreate.body).toEqual(AUTH_ERROR);
+
+    const unauthenticatedMalformedJson = await request(app)
+      .post("/flags")
+      .set("content-type", "application/json")
+      .send('{"key":"checkout-redesign"');
+    expect(unauthenticatedMalformedJson.status).toBe(401);
+    expect(unauthenticatedMalformedJson.body).toEqual(AUTH_ERROR);
+
+    const unauthenticatedInvalidKey = await request(app).get("/flags/%20");
+    expect(unauthenticatedInvalidKey.status).toBe(401);
+
+    const unauthenticatedInvalidUpdate = await request(app)
+      .patch("/flags/checkout-redesign")
+      .send({});
+    expect(unauthenticatedInvalidUpdate.status).toBe(401);
+
+    const unauthenticatedInvalidEvaluation = await request(app)
+      .post("/flags/checkout-redesign/evaluate")
+      .send({ context: { plan: null } });
+    expect(unauthenticatedInvalidEvaluation.status).toBe(401);
+
+    const auditLogResponse = await adminGet("/audit-log");
+    expect(auditLogResponse.body).toHaveLength(1);
+    expect(auditLogResponse.body[0]).toMatchObject({
+      action: "flag_created",
+      flagKey: "checkout-redesign",
+    });
+  });
+
+  it("does not leak admin API key details in authentication failures", async () => {
+    app = createTestApp({
+      adminAuth: { apiKey: "super-secret-admin-key" },
+    });
+
+    const response = await request(app)
+      .get("/flags")
+      .set("X-Admin-API-Key", "submitted-secret-admin-key");
+
+    const serializedBody = JSON.stringify(response.body);
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual(AUTH_ERROR);
+    expect(serializedBody).not.toContain("super-secret-admin-key");
+    expect(serializedBody).not.toContain("submitted-secret-admin-key");
+    expect(serializedBody).not.toContain("missing");
+    expect(serializedBody).not.toContain("invalid");
+    expect(serializedBody).not.toContain("comparison");
+    expect(serializedBody).not.toContain("database");
+    expect(serializedBody).not.toContain("stack");
+  });
 });
 
 function createFlag(key: string) {
-  return request(app).post("/flags").send({
+  return adminPost("/flags").send({
     key,
     enabled: true,
     rules: [],
@@ -460,6 +560,7 @@ function useDeterministicAuditApp() {
   ];
 
   app = createApp({
+    adminAuth: { apiKey: TEST_ADMIN_API_KEY },
     flags: new InMemoryFlagRepository(),
     auditLog: new InMemoryAuditLogRepository(),
     eventIdGenerator: () => ids.shift() ?? "event-extra",
@@ -471,9 +572,22 @@ function createTestApp(
   overrides: Partial<Parameters<typeof createApp>[0]> = {},
 ) {
   return createApp({
+    adminAuth: { apiKey: TEST_ADMIN_API_KEY },
     flags: new InMemoryFlagRepository(),
     auditLog: new InMemoryAuditLogRepository(),
     readinessCheck: async () => {},
     ...overrides,
   });
+}
+
+function adminGet(path: string) {
+  return request(app).get(path).set("X-Admin-API-Key", TEST_ADMIN_API_KEY);
+}
+
+function adminPost(path: string) {
+  return request(app).post(path).set("X-Admin-API-Key", TEST_ADMIN_API_KEY);
+}
+
+function adminPatch(path: string) {
+  return request(app).patch(path).set("X-Admin-API-Key", TEST_ADMIN_API_KEY);
 }
