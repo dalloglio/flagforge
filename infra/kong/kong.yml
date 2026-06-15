@@ -1,0 +1,10 @@
+_format_version: "3.0"
+
+services:
+  - name: flagforge-api
+    url: http://app:3000
+    routes:
+      - name: flagforge-api-route
+        paths:
+          - /
+        strip_path: false

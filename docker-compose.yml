@@ -13,6 +13,20 @@ services:
     ports:
       - "${PORT:-3000}:3000"
 
+  kong:
+    image: kong:3.9
+    depends_on:
+      - app
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: "off"
+    ports:
+      - "${KONG_PROXY_PORT:-8000}:8000"
+    volumes:
+      - ./infra/kong/kong.yml:/kong/declarative/kong.yml:ro
+
   postgres:
     image: postgres:17-alpine
     ports:
