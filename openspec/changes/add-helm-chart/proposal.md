@@ -5,7 +5,9 @@ FlagForge needs Kubernetes packaging before it can run consistently in the Level
 ## What Changes
 
 - Add a Helm chart for the FlagForge API runtime with local-first defaults.
-- Make image, container port, service port/type, environment variables, and health/readiness probes configurable through values.
+- Make image, container port, service port/type, runtime environment variables including `PORT`, and health/readiness probes configurable through values.
+- Align the API process `PORT`, container port, Service target port, and probe port so rendered manifests remain functional when the container port is customized.
+- Support chart-managed local Secrets and references to an existing Secret for sensitive runtime values.
 - Provide a local values file suitable for a future kind deployment path.
 - Add documented chart render/lint validation commands where feasible.
 - Update README and local runbook documentation with chart usage, local values, and validation steps.

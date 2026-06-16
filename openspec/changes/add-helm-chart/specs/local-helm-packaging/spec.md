@@ -29,16 +29,34 @@ The Helm chart SHALL expose values for configuring the existing FlagForge API co
 - **WHEN** a contributor reviews the chart values
 - **THEN** the values allow configuration of the API image repository, tag, pull policy, replica count, container port, service port, and service type
 
+#### Scenario: API process port follows container port
+
+- **WHEN** Helm renders the chart with a configured container port
+- **THEN** the API workload receives `PORT` with the same value as the configured container port
+- **AND** the container port, Service target port, liveness probe port, and readiness probe port target the same API container port
+
 #### Scenario: Runtime environment is configurable
 
 - **WHEN** a contributor reviews the chart values
-- **THEN** the values allow configuration of `DATABASE_URL`, `ADMIN_API_KEY`, `ADMIN_RATE_LIMIT_REQUESTS`, and `ADMIN_RATE_LIMIT_WINDOW_MS`
+- **THEN** the values allow configuration of `PORT`, `DATABASE_URL`, `ADMIN_API_KEY`, `ADMIN_RATE_LIMIT_REQUESTS`, and `ADMIN_RATE_LIMIT_WINDOW_MS`
 - **AND** local defaults are clearly non-secret development values when provided
 
 #### Scenario: Configuration renders into workload environment
 
 - **WHEN** Helm renders the chart with local values
 - **THEN** the API workload receives the configured runtime environment variables needed for startup
+
+#### Scenario: Sensitive runtime values use chart-managed Secret
+
+- **WHEN** Helm renders the chart with chart-managed secret creation enabled
+- **THEN** sensitive runtime values including `DATABASE_URL` and `ADMIN_API_KEY` render through a Kubernetes Secret
+- **AND** the API workload references those values from the rendered Secret
+
+#### Scenario: Sensitive runtime values can use an existing Secret
+
+- **WHEN** Helm renders the chart with an existing Secret reference configured
+- **THEN** the API workload references the configured existing Secret for sensitive runtime values
+- **AND** Helm does not render a duplicate chart-managed Secret for those values
 
 ### Requirement: Operational probes
 
