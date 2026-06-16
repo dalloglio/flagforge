@@ -1,0 +1,42 @@
+replicaCount: 1
+
+image:
+  repository: flagforge-api
+  tag: local
+  pullPolicy: IfNotPresent
+
+containerPort: 3000
+
+service:
+  type: ClusterIP
+  port: 3000
+
+runtime:
+  adminRateLimitRequests: "60"
+  adminRateLimitWindowMs: "60000"
+
+secret:
+  create: true
+  existingSecret: ""
+  keys:
+    databaseUrl: DATABASE_URL
+    adminApiKey: ADMIN_API_KEY
+  data:
+    databaseUrl: postgres://flagforge:flagforge@postgres:5432/flagforge
+    adminApiKey: dev-admin-api-key
+
+livenessProbe:
+  enabled: true
+  path: /healthz
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /readyz
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
