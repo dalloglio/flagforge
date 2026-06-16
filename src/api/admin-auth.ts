@@ -2,6 +2,7 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { sendError } from "./errors.js";
 
 export const adminApiKeyHeader = "X-Admin-API-Key";
+export const authenticatedAdminIdentity = "configured-admin-api-key";
 
 export type AdminAuthConfig = {
   apiKey: string;
@@ -34,6 +35,7 @@ export function createAdminAuthGuard(config: AdminAuthConfig): RequestHandler {
       return sendAdminAuthError(response);
     }
 
+    response.locals.adminIdentity = authenticatedAdminIdentity;
     return next();
   };
 }

@@ -7,6 +7,7 @@ export type ErrorCode =
   | "conflict"
   | "not_found"
   | "bad_request"
+  | "rate_limited"
   | "internal_error";
 
 export function sendError(

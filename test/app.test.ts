@@ -521,6 +521,127 @@ describe("FlagForge API", () => {
     });
   });
 
+  it("rate limits authenticated protected admin requests with retry guidance", async () => {
+    let now = 1_000;
+    const flags = new InMemoryFlagRepository();
+    const auditLog = new InMemoryAuditLogRepository();
+    app = createTestApp({
+      flags,
+      auditLog,
+      adminRateLimit: { maxRequests: 1, windowMs: 2_000 },
+      rateLimitClock: () => now,
+    });
+
+    const allowedResponse = await adminPost("/flags").send({
+      key: "checkout-redesign",
+      enabled: true,
+      rules: [],
+    });
+    expect(allowedResponse.status).toBe(201);
+
+    now = 1_500;
+    const limitedResponse = await adminPost("/flags").send({
+      key: "pricing-page",
+      enabled: true,
+      rules: [],
+    });
+
+    expect(limitedResponse.status).toBe(429);
+    expect(limitedResponse.headers["retry-after"]).toBe("2");
+    expect(limitedResponse.body).toEqual({
+      error: {
+        code: "rate_limited",
+        message: "Admin API rate limit exceeded",
+      },
+    });
+    expect(await flags.list()).toHaveLength(1);
+    expect(await auditLog.list()).toHaveLength(1);
+  });
+
+  it("does not leak secrets or implementation details in rate-limit responses", async () => {
+    app = createTestApp({
+      adminAuth: { apiKey: "super-secret-admin-key" },
+      adminRateLimit: { maxRequests: 1, windowMs: 60_000 },
+      rateLimitClock: () => 1_000,
+    });
+
+    await request(app)
+      .get("/flags")
+      .set("X-Admin-API-Key", "super-secret-admin-key");
+
+    const response = await request(app)
+      .get("/flags")
+      .set("X-Admin-API-Key", "super-secret-admin-key");
+
+    const serializedBody = JSON.stringify(response.body);
+    expect(response.status).toBe(429);
+    expect(serializedBody).not.toContain("super-secret-admin-key");
+    expect(serializedBody).not.toContain("configured-admin-api-key");
+    expect(serializedBody).not.toContain("gateway");
+    expect(serializedBody).not.toContain("database");
+    expect(serializedBody).not.toContain("stack");
+  });
+
+  it("allows protected admin requests again after the rate-limit window resets", async () => {
+    let now = 1_000;
+    app = createTestApp({
+      adminRateLimit: { maxRequests: 1, windowMs: 1_000 },
+      rateLimitClock: () => now,
+    });
+
+    expect((await adminGet("/flags")).status).toBe(200);
+    expect((await adminGet("/flags")).status).toBe(429);
+
+    now = 2_000;
+    expect((await adminGet("/flags")).status).toBe(200);
+  });
+
+  it("rejects missing or invalid credentials before rate limiting and without consuming budget", async () => {
+    app = createTestApp({
+      adminRateLimit: { maxRequests: 1, windowMs: 60_000 },
+      rateLimitClock: () => 1_000,
+    });
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const missingResponse = await request(app).get("/flags");
+      expect(missingResponse.status).toBe(401);
+      expect(missingResponse.body).toEqual(AUTH_ERROR);
+
+      const invalidResponse = await request(app)
+        .get("/flags")
+        .set("X-Admin-API-Key", INVALID_ADMIN_API_KEY);
+      expect(invalidResponse.status).toBe(401);
+      expect(invalidResponse.body).toEqual(AUTH_ERROR);
+    }
+
+    const validResponse = await adminGet("/flags");
+    expect(validResponse.status).toBe(200);
+
+    const limitedResponse = await adminGet("/flags");
+    expect(limitedResponse.status).toBe(429);
+
+    const invalidAfterLimitResponse = await request(app)
+      .get("/flags")
+      .set("X-Admin-API-Key", INVALID_ADMIN_API_KEY);
+    expect(invalidAfterLimitResponse.status).toBe(401);
+    expect(invalidAfterLimitResponse.body).toEqual(AUTH_ERROR);
+  });
+
+  it("does not require or consume admin rate-limit budget for operational endpoints", async () => {
+    app = createTestApp({
+      adminRateLimit: { maxRequests: 1, windowMs: 60_000 },
+      rateLimitClock: () => 1_000,
+    });
+
+    for (const path of ["/health", "/healthz", "/readyz", "/metrics"]) {
+      const response = await request(app).get(path);
+      expect(response.status).toBe(200);
+    }
+
+    expect((await adminGet("/flags")).status).toBe(200);
+    expect((await adminGet("/flags")).status).toBe(429);
+  });
+
   it("does not leak admin API key details in authentication failures", async () => {
     app = createTestApp({
       adminAuth: { apiKey: "super-secret-admin-key" },
