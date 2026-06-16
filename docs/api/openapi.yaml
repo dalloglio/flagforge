@@ -104,6 +104,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
     get:
       tags:
         - Flags
@@ -126,6 +128,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /flags/{key}:
     parameters:
       - $ref: "#/components/parameters/FlagKeyPath"
@@ -161,6 +165,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
     patch:
       tags:
         - Flags
@@ -199,6 +205,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /flags/{key}/evaluate:
     parameters:
       - $ref: "#/components/parameters/FlagKeyPath"
@@ -240,6 +248,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /audit-log:
     get:
       tags:
@@ -276,12 +286,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
 components:
   securitySchemes:
     AdminApiKey:
       type: apiKey
       in: header
       name: X-Admin-API-Key
+  responses:
+    RateLimited:
+      description: Authenticated admin identity exceeded the configured rate limit.
+      headers:
+        Retry-After:
+          description: Seconds until the current rate-limit window resets.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   parameters:
     FlagKeyPath:
       name: key
@@ -554,6 +579,7 @@ components:
             - conflict
             - not_found
             - bad_request
+            - rate_limited
             - internal_error
         message:
           type: string

@@ -8,6 +8,8 @@ Use one root `.env` file for non-secret Docker-backed local defaults. Start from
 COMPOSE_PROJECT_NAME=flagforge
 PORT=3000
 ADMIN_API_KEY=dev-admin-api-key
+ADMIN_RATE_LIMIT_REQUESTS=60
+ADMIN_RATE_LIMIT_WINDOW_MS=60000
 KONG_PROXY_PORT=8000
 DATABASE_PORT=5432
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
@@ -17,7 +19,7 @@ TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5433/flagforge_test
 
 `COMPOSE_PROJECT_NAME` is read by Docker Compose on the host to isolate project resources such as containers, networks, and volumes. It is not a container runtime setting.
 
-`ADMIN_API_KEY` is required when starting the API outside tests. Use a non-secret local value such as `dev-admin-api-key`; protected admin endpoints accept it only through the `X-Admin-API-Key` request header. `DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`, even though the `TEST_` values live in the same local `.env` file.
+`ADMIN_API_KEY` is required when starting the API outside tests. Use a non-secret local value such as `dev-admin-api-key`; protected admin endpoints accept it only through the `X-Admin-API-Key` request header. `ADMIN_RATE_LIMIT_REQUESTS` and `ADMIN_RATE_LIMIT_WINDOW_MS` configure the local in-process fixed-window admin API rate limit. The defaults allow 60 protected admin requests per 60,000 milliseconds for the authenticated admin identity. `DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`, even though the `TEST_` values live in the same local `.env` file.
 
 Keep `DATABASE_URL` and `TEST_DATABASE_URL` explicit. If you change `DATABASE_PORT` or `TEST_DATABASE_PORT`, update the matching URL port as well; local dotenv loading does not compose URL values from other variables.
 
@@ -27,6 +29,8 @@ For parallel worktrees, use distinct Compose project names and host ports in eac
 COMPOSE_PROJECT_NAME=flagforge-exp-17
 PORT=3017
 ADMIN_API_KEY=dev-admin-api-key
+ADMIN_RATE_LIMIT_REQUESTS=60
+ADMIN_RATE_LIMIT_WINDOW_MS=60000
 KONG_PROXY_PORT=8017
 DATABASE_PORT=5417
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5417/flagforge
@@ -66,6 +70,18 @@ Call protected endpoints with the local admin key:
 curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/flags
 ```
 
+Validate local admin rate limiting with a short window:
+
+```bash
+ADMIN_RATE_LIMIT_REQUESTS=1 ADMIN_RATE_LIMIT_WINDOW_MS=5000 npm run dev
+curl -i -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/flags
+curl -i -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/flags
+sleep 5
+curl -i -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/flags
+```
+
+The first protected request is allowed, the second returns HTTP `429` with the standard error body and a `Retry-After` header, and the final request succeeds after the fixed window resets. Missing or invalid `X-Admin-API-Key` values still return HTTP `401` before rate-limit accounting. `/health`, `/healthz`, `/readyz`, and `/metrics` do not require or consume admin rate-limit budget.
+
 Run checks:
 
 ```bash
@@ -76,7 +92,7 @@ npm run build
 npm run verify
 ```
 
-`npm run verify` is host-only and does not require Docker or PostgreSQL. It includes OpenAPI validation. Run PostgreSQL integration tests separately when a database is available.
+`npm run verify` is host-only and does not require Docker or PostgreSQL. It includes OpenAPI validation. Run PostgreSQL integration tests separately when a database is available. Gateway-dependent admin rate-limit validation remains a smoke check outside `npm run verify` when it requires Docker, Kong, or running services.
 
 ## API Contract
 
@@ -156,6 +172,8 @@ curl --fail http://localhost:${KONG_PROXY_PORT:-8000}/health
 make smoke-gateway
 ```
 
+Admin rate limiting is enforced by the application for both direct host access and proxied Kong traffic. To smoke check the gateway path, start the API with a low `ADMIN_RATE_LIMIT_REQUESTS` value, send repeated protected requests through `http://localhost:${KONG_PROXY_PORT:-8000}`, and verify the same HTTP `429` and `Retry-After` behavior observed through the direct app port.
+
 Override the gateway host port by setting `KONG_PROXY_PORT` before starting Compose:
 
 ```bash
@@ -199,4 +217,4 @@ If the gateway host port is unavailable, set `KONG_PROXY_PORT` to an unused port
 
 ## Out of Scope
 
-Local Kong does not add authentication, authorization, rate limiting, production hardening, Helm, kind, Argo CD, cloud deployment, registry publishing, or observability.
+Local Kong does not add authentication, authorization, production hardening, Helm, kind, Argo CD, cloud deployment, registry publishing, or observability. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.

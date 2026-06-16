@@ -30,6 +30,14 @@ import {
   type FlagRepository,
 } from "../domain/repository.js";
 import { createAdminAuthGuard, type AdminAuthConfig } from "./admin-auth.js";
+import {
+  createAdminRateLimitMiddleware,
+  defaultAdminRateLimitRequests,
+  defaultAdminRateLimitWindowMs,
+  FixedWindowAdminRateLimiter,
+  type AdminRateLimitConfig,
+  type MillisecondClock,
+} from "./admin-rate-limit.js";
 import { sendError, zodDetails } from "./errors.js";
 
 export type AppDependencies = {
@@ -40,6 +48,8 @@ export type AppDependencies = {
   eventIdGenerator?: EventIdGenerator;
   clock?: Clock;
   readinessCheck?: ReadinessCheck;
+  adminRateLimit?: AdminRateLimitConfig;
+  rateLimitClock?: MillisecondClock;
 };
 
 export function createApp(dependencies: AppDependencies = {}) {
@@ -54,6 +64,15 @@ export function createApp(dependencies: AppDependencies = {}) {
     throw new Error("adminAuth is required outside tests");
   }
   const requireAdminAuth = createAdminAuthGuard(adminAuth);
+  const requireAdminRateLimit = createAdminRateLimitMiddleware(
+    new FixedWindowAdminRateLimiter(
+      dependencies.adminRateLimit ?? {
+        maxRequests: defaultAdminRateLimitRequests,
+        windowMs: defaultAdminRateLimitWindowMs,
+      },
+      dependencies.rateLimitClock,
+    ),
+  );
   const parseJson = express.json();
   const useCases =
     dependencies.useCases ??
@@ -86,78 +105,100 @@ export function createApp(dependencies: AppDependencies = {}) {
     }
   });
 
-  app.post("/flags", requireAdminAuth, parseJson, async (request, response) => {
-    const parsed = createFlagSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return sendError(
-        response,
-        400,
-        "validation_error",
-        "Invalid feature flag payload",
-        zodDetails(parsed.error),
-      );
-    }
-
-    try {
-      const created = await useCases.createFlag(parsed.data);
-      return response.status(201).json(created);
-    } catch (error) {
-      if (error instanceof DuplicateFlagError) {
-        return sendError(response, 409, "conflict", error.message);
+  app.post(
+    "/flags",
+    requireAdminAuth,
+    requireAdminRateLimit,
+    parseJson,
+    async (request, response) => {
+      const parsed = createFlagSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return sendError(
+          response,
+          400,
+          "validation_error",
+          "Invalid feature flag payload",
+          zodDetails(parsed.error),
+        );
       }
 
-      throw error;
-    }
-  });
+      try {
+        const created = await useCases.createFlag(parsed.data);
+        return response.status(201).json(created);
+      } catch (error) {
+        if (error instanceof DuplicateFlagError) {
+          return sendError(response, 409, "conflict", error.message);
+        }
 
-  app.get("/flags", requireAdminAuth, async (_request, response) => {
-    response.status(200).json(await useCases.listFlags());
-  });
+        throw error;
+      }
+    },
+  );
 
-  app.get("/audit-log", requireAdminAuth, async (request, response) => {
-    const rawFlagKey = request.query.flagKey;
-    if (rawFlagKey === undefined) {
-      return response.status(200).json(await useCases.listAuditEvents());
-    }
+  app.get(
+    "/flags",
+    requireAdminAuth,
+    requireAdminRateLimit,
+    async (_request, response) => {
+      response.status(200).json(await useCases.listFlags());
+    },
+  );
 
-    const parsed = flagKeySchema.safeParse(rawFlagKey);
-    if (!parsed.success) {
-      return sendError(
-        response,
-        400,
-        "validation_error",
-        "Invalid audit log filter",
-        zodDetails(parsed.error),
-      );
-    }
+  app.get(
+    "/audit-log",
+    requireAdminAuth,
+    requireAdminRateLimit,
+    async (request, response) => {
+      const rawFlagKey = request.query.flagKey;
+      if (rawFlagKey === undefined) {
+        return response.status(200).json(await useCases.listAuditEvents());
+      }
 
-    return response
-      .status(200)
-      .json(await useCases.listAuditEvents({ flagKey: parsed.data }));
-  });
+      const parsed = flagKeySchema.safeParse(rawFlagKey);
+      if (!parsed.success) {
+        return sendError(
+          response,
+          400,
+          "validation_error",
+          "Invalid audit log filter",
+          zodDetails(parsed.error),
+        );
+      }
 
-  app.get("/flags/:key", requireAdminAuth, async (request, response) => {
-    const key = parseKey(request, response);
-    if (!key) {
-      return;
-    }
+      return response
+        .status(200)
+        .json(await useCases.listAuditEvents({ flagKey: parsed.data }));
+    },
+  );
 
-    const flag = await useCases.getFlag(key);
-    if (!flag) {
-      return sendError(
-        response,
-        404,
-        "not_found",
-        `Feature flag '${key}' was not found`,
-      );
-    }
+  app.get(
+    "/flags/:key",
+    requireAdminAuth,
+    requireAdminRateLimit,
+    async (request, response) => {
+      const key = parseKey(request, response);
+      if (!key) {
+        return;
+      }
 
-    return response.status(200).json(flag);
-  });
+      const flag = await useCases.getFlag(key);
+      if (!flag) {
+        return sendError(
+          response,
+          404,
+          "not_found",
+          `Feature flag '${key}' was not found`,
+        );
+      }
+
+      return response.status(200).json(flag);
+    },
+  );
 
   app.patch(
     "/flags/:key",
     requireAdminAuth,
+    requireAdminRateLimit,
     parseJson,
     async (request, response) => {
       const key = parseKey(request, response);
@@ -193,6 +234,7 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.post(
     "/flags/:key/evaluate",
     requireAdminAuth,
+    requireAdminRateLimit,
     parseJson,
     async (request, response) => {
       const key = parseKey(request, response);
