@@ -67,4 +67,3 @@ Alternatives considered:
 - [Risk] Secret handling may be too rigid for future GitOps workflows. -> Mitigation: support values-driven local Secrets while keeping room for existing Secret references in later implementation.
 - [Risk] Probe paths or ports could drift from the API. -> Mitigation: use the current `/healthz` and `/readyz` endpoints and make probe paths configurable with documented defaults.
 - [Risk] Helm validation may not run on machines without Helm installed. -> Mitigation: keep Helm checks explicit and document Helm as a prerequisite for chart validation.
-
