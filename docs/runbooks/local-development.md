@@ -94,6 +94,32 @@ npm run verify
 
 `npm run verify` is host-only and does not require Docker or PostgreSQL. It includes OpenAPI validation. Run PostgreSQL integration tests separately when a database is available. Gateway-dependent admin rate-limit validation remains a smoke check outside `npm run verify` when it requires Docker, Kong, or running services.
 
+## Local Helm Packaging
+
+Helm chart validation requires the Helm CLI. It does not require Argo CD, Kong, AWS, EKS, or a running Kubernetes cluster.
+
+The API chart lives at `charts/flagforge-api`. Use `charts/flagforge-api/values-local.yaml` for the Level 1 local platform path. The local values keep the scope to the API workload and non-secret development configuration; they do not install PostgreSQL, Kong, observability, Argo CD, or cloud infrastructure.
+
+Lint the chart with default and local values:
+
+```bash
+helm lint charts/flagforge-api
+helm lint charts/flagforge-api -f charts/flagforge-api/values-local.yaml
+```
+
+Render manifests with default and local values:
+
+```bash
+helm template flagforge-api charts/flagforge-api
+helm template flagforge-api charts/flagforge-api -f charts/flagforge-api/values-local.yaml
+```
+
+The chart renders the API Deployment, Service, runtime ConfigMap, and chart-managed Secret by default. `PORT` is derived from `containerPort`, so the Node.js process port, container port, Service target port, liveness probe port, and readiness probe port stay aligned. Liveness defaults to `GET /healthz`; readiness defaults to `GET /readyz`. Probe paths and timing settings are configurable in values.
+
+Sensitive runtime values use a chart-managed Secret by default for local use. To use an externally managed Secret, set `secret.existingSecret` and keep `secret.keys.databaseUrl` and `secret.keys.adminApiKey` aligned with that Secret's keys; the chart will reference the existing Secret and skip rendering its own Secret.
+
+Helm lint/template checks are explicit platform packaging checks. They remain outside `npm run verify`, which is the host-only completion gate.
+
 ## API Contract
 
 The canonical API contract is `docs/api/openapi.yaml`.
@@ -217,4 +243,4 @@ If the gateway host port is unavailable, set `KONG_PROXY_PORT` to an unused port
 
 ## Out of Scope
 
-Local Kong does not add authentication, authorization, production hardening, Helm, kind, Argo CD, cloud deployment, registry publishing, or observability. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
+Local Kong does not add authentication, authorization, production hardening, kind, Argo CD, cloud deployment, registry publishing, or observability. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.

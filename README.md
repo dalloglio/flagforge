@@ -30,6 +30,10 @@ docker compose up -d postgres-test
 npm run test:postgres
 npm run build
 docker build -t flagforge-api:local .
+helm lint charts/flagforge-api
+helm lint charts/flagforge-api -f charts/flagforge-api/values-local.yaml
+helm template flagforge-api charts/flagforge-api
+helm template flagforge-api charts/flagforge-api -f charts/flagforge-api/values-local.yaml
 docker compose up -d app
 curl --fail http://localhost:3000/health
 curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
@@ -41,6 +45,23 @@ npm run verify
 ```
 
 Use `npm run verify` before treating implementation work as complete. It runs host-only checks, including OpenAPI validation, and does not require Docker or PostgreSQL. Run PostgreSQL integration, Docker build, and Compose smoke checks explicitly when those tools are available.
+
+## Helm
+
+The FlagForge API Helm chart lives at `charts/flagforge-api`. It packages only the API runtime for the Level 1 local platform path and does not install Argo CD, Kong, PostgreSQL, Prometheus, Grafana, OpenTelemetry, AWS, or EKS resources.
+
+The local values file is `charts/flagforge-api/values-local.yaml`. It uses non-secret local defaults for the future kind path, including `DATABASE_URL=postgres://flagforge:flagforge@postgres:5432/flagforge` and `ADMIN_API_KEY=dev-admin-api-key`.
+
+Validate the chart when the Helm CLI is available:
+
+```bash
+helm lint charts/flagforge-api
+helm lint charts/flagforge-api -f charts/flagforge-api/values-local.yaml
+helm template flagforge-api charts/flagforge-api
+helm template flagforge-api charts/flagforge-api -f charts/flagforge-api/values-local.yaml
+```
+
+The chart renders the API Deployment, Service, runtime ConfigMap, and chart-managed Secret by default. Set `secret.existingSecret` to reference externally managed `DATABASE_URL` and `ADMIN_API_KEY` values without rendering a duplicate Secret. Helm validation is an explicit platform packaging check and is not part of the host-only `npm run verify` gate.
 
 ## API Contract
 

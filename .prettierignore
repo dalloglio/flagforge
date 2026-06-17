@@ -1,3 +1,4 @@
 .codex/
+charts/*/templates/
 dist/
 node_modules/
