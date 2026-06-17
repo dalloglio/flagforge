@@ -21,7 +21,7 @@
 
 ## 4. Validation
 
-- [ ] 4.1 Run `helm lint` against the chart with default and local values when Helm is available.
-- [ ] 4.2 Run `helm template` against the chart with default and local values and confirm the rendered manifests include the API workload, Service, runtime environment, aligned `PORT`/container/probe ports, Secret handling, and probes.
+- [x] 4.1 Run `helm lint` against the chart with default and local values when Helm is available.
+- [x] 4.2 Run `helm template` against the chart with default and local values and confirm the rendered manifests include the API workload, Service, runtime environment, aligned `PORT`/container/probe ports, Secret handling, and probes.
 - [x] 4.3 Run strict OpenSpec validation for `add-helm-chart`.
 - [x] 4.4 Run `npm run verify` or report any environment/tooling blocker if verification cannot complete.
