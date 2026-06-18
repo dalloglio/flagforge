@@ -2,7 +2,7 @@
 
 ### Requirement: Local Prometheus scrape configuration
 
-FlagForge SHALL provide local Prometheus configuration for scraping the existing FlagForge metrics endpoint.
+FlagForge SHALL provide Docker Compose local Prometheus configuration for scraping the existing FlagForge metrics endpoint.
 
 #### Scenario: Prometheus configuration is source controlled
 
@@ -14,34 +14,41 @@ FlagForge SHALL provide local Prometheus configuration for scraping the existing
 
 - **WHEN** the local observability stack and FlagForge API are running
 - **THEN** Prometheus scrapes the existing FlagForge `GET /metrics` endpoint through the documented local target
-- **AND** the scrape configuration does not require AWS, EKS, Datadog, OpenTelemetry Collector, or production monitoring services
+- **AND** the scrape configuration does not require kind, Kubernetes, AWS, EKS, Datadog, OpenTelemetry Collector, or production monitoring services
 
 #### Scenario: Prometheus scope is documented
 
 - **WHEN** a contributor reads the local observability documentation
-- **THEN** it identifies the local scrape target, expected service prerequisites, and how to inspect target health in Prometheus
+- **THEN** it identifies the Docker Compose local scrape target, expected service prerequisites, and how to inspect target health in Prometheus
 
 ### Requirement: Local Grafana dashboard
 
-FlagForge SHALL provide a local Grafana setup that can visualize basic FlagForge operational metrics.
+FlagForge SHALL provide a Docker Compose local Grafana setup that can visualize basic FlagForge operational metrics.
 
 #### Scenario: Grafana setup is reproducible
 
 - **WHEN** a contributor follows the local observability workflow
 - **THEN** Grafana can be started or accessed with documented local configuration
 - **AND** the workflow identifies how Grafana connects to the local Prometheus datasource
+- **AND** the datasource configuration is source controlled
+
+#### Scenario: Basic FlagForge dashboard is provisioned from source
+
+- **WHEN** a contributor inspects the repository
+- **THEN** a source-controlled basic FlagForge dashboard definition exists in an infrastructure-oriented path
+- **AND** Grafana provisioning can load the dashboard without requiring manual dashboard creation
 
 #### Scenario: Basic FlagForge dashboard is available
 
 - **WHEN** Grafana is connected to local Prometheus after FlagForge metrics have been scraped
-- **THEN** a basic FlagForge dashboard or documented import path is available
+- **THEN** a basic FlagForge dashboard is available
 - **AND** the dashboard visualizes at least one request metric or runtime metric exposed by the existing `/metrics` endpoint
 
 #### Scenario: Dashboard scope is local
 
 - **WHEN** a contributor reads the local dashboard documentation
 - **THEN** it states that the dashboard is for Level 1 local observability practice
-- **AND** it does not claim production SLOs, alerting coverage, AWS observability, or vendor-managed monitoring support
+- **AND** it does not claim production SLOs, alerting coverage, OpenTelemetry Collector coverage, AWS observability, or vendor-managed monitoring support
 
 ### Requirement: Local observability validation
 
@@ -55,12 +62,12 @@ FlagForge SHALL document a validation path for the local Prometheus and Grafana 
 #### Scenario: Grafana validation proves dashboard access
 
 - **WHEN** Prometheus has scraped FlagForge metrics and Grafana is running
-- **THEN** the documented validation path proves the basic FlagForge dashboard can be opened or imported locally
+- **THEN** the documented validation path proves the provisioned basic FlagForge dashboard can be opened locally
 
 #### Scenario: Observability validation remains outside verify
 
 - **WHEN** a contributor inspects the verification scripts
-- **THEN** `npm run verify` does not require Prometheus, Grafana, Docker, Kubernetes, PostgreSQL services, or running observability services
+- **THEN** `npm run verify` does not require Prometheus, Grafana, Docker, Docker Compose, Kubernetes, PostgreSQL services, or running observability services
 - **AND** local observability validation is available through separate documented commands or Makefile targets
 
 ### Requirement: Local observability operations documentation
@@ -75,7 +82,7 @@ FlagForge SHALL document how to run, reset, and troubleshoot the local observabi
 #### Scenario: Troubleshooting guidance exists
 
 - **WHEN** a contributor reads the local observability documentation
-- **THEN** it includes troubleshooting guidance for missing metrics, unavailable scrape targets, Grafana datasource failures, dashboard import failures, and local port conflicts
+- **THEN** it includes troubleshooting guidance for missing metrics, unavailable scrape targets, Grafana datasource failures, dashboard provisioning failures, and local port conflicts
 
 #### Scenario: Vendor-neutral scope is documented
 
