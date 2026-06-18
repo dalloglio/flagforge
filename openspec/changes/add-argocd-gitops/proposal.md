@@ -6,6 +6,7 @@ FlagForge needs a local GitOps delivery path after local Kubernetes packaging ex
 
 - Add local Argo CD setup documentation for the FlagForge local Kubernetes workflow.
 - Add a source-controlled Argo CD Application definition or equivalent local desired-state entrypoint for FlagForge.
+- Define how the local Argo CD desired state references the repository branch or revision, including feature-branch validation without committing local-only branch names.
 - Document sync, health, drift, and rollback validation for the local application path.
 - Keep secrets handling limited to local-safe configuration and avoid production promotion workflows.
 - Keep AWS/EKS, production rollout, complex multi-environment promotion, and cloud-specific GitOps concerns out of scope.
@@ -23,6 +24,6 @@ FlagForge needs a local GitOps delivery path after local Kubernetes packaging ex
 ## Impact
 
 - Affected systems: local platform documentation, Argo CD application configuration, GitOps validation workflow, and Kubernetes desired-state repository layout.
-- Affected existing capabilities: the workflow should consume existing local Kubernetes and Helm packaging behavior without changing the FlagForge API contract.
+- Affected existing capabilities: the workflow should depend on the existing local kind and Helm packaging behavior without reimplementing deployment primitives or changing the FlagForge API contract.
 - API impact: no public FlagForge API contract changes are expected.
 - Dependency impact: Argo CD CLI or local Argo CD access may become prerequisites for optional GitOps validation.

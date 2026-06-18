@@ -15,6 +15,14 @@ FlagForge SHALL provide source-controlled desired-state configuration for deploy
 - **WHEN** the local Argo CD application configuration is reviewed
 - **THEN** it points to the FlagForge Helm chart and local values intended for Level 1 platform practice
 - **AND** it does not define a competing raw Kubernetes deployment for the API workload
+- **AND** it relies on the existing local kind and Helm packaging workflow instead of reimplementing local deployment primitives in Argo CD-specific manifests
+
+#### Scenario: Target revision strategy is documented
+
+- **WHEN** a contributor reviews the local Argo CD desired-state artifact and documentation
+- **THEN** the reusable desired-state artifact uses a mainline-safe default repository revision
+- **AND** the documentation explains how to validate an unmerged feature branch by overriding the local Argo CD application target revision to a pushed branch name or commit SHA
+- **AND** branch-specific or worktree-specific revisions are not required to be committed to the reusable desired-state artifact
 
 ### Requirement: Local Argo CD sync workflow
 
@@ -23,7 +31,7 @@ FlagForge SHALL document how to install or access local Argo CD and sync the Fla
 #### Scenario: Sync documentation exists
 
 - **WHEN** a contributor reads the local GitOps documentation
-- **THEN** it explains how to prepare local Kubernetes, make Argo CD available, apply the FlagForge application definition, and sync the application
+- **THEN** it explains how to prepare local Kubernetes through the existing kind/Helm workflow, make Argo CD available, apply the FlagForge application definition, and sync the application
 - **AND** it identifies required CLIs or access methods such as kubectl and Argo CD CLI or UI access
 
 #### Scenario: Application health can be inspected
@@ -77,3 +85,4 @@ FlagForge SHALL document local GitOps operations for sync, drift inspection, rol
 - **WHEN** a contributor reads the local GitOps documentation
 - **THEN** it explains how local-safe runtime configuration is provided
 - **AND** it warns contributors not to commit production secrets or personal credentials
+- **AND** it states that local-safe secret handling is not a production secrets strategy
