@@ -16,6 +16,12 @@ FlagForge SHALL provide a reproducible kind configuration for Level 1 local Kube
 - **THEN** a named local kind cluster can be created using source-controlled configuration
 - **AND** the workflow identifies Docker, kind, kubectl, and Helm as prerequisites
 
+#### Scenario: Workflow wrappers remain thin
+
+- **WHEN** a contributor inspects the local kind workflow commands
+- **THEN** Makefile targets or documented commands call kind, kubectl, and Helm directly around source-controlled configuration
+- **AND** cluster lifecycle behavior is not hidden behind opaque orchestration scripts
+
 ### Requirement: FlagForge runs in local kind
 
 FlagForge SHALL document and support running the API in the local kind cluster using the local platform packaging path.
@@ -25,6 +31,14 @@ FlagForge SHALL document and support running the API in the local kind cluster u
 - **WHEN** a contributor follows the documented kind deployment workflow
 - **THEN** the FlagForge API workload is deployed to kind using the local Helm chart
 - **AND** the workflow does not require Argo CD, Kong, Prometheus, Grafana, AWS, or EKS
+- **AND** the workflow does not add raw API workload manifests that duplicate the local Helm packaging capability
+
+#### Scenario: PostgreSQL runs inside kind
+
+- **WHEN** a contributor follows the documented kind deployment workflow
+- **THEN** PostgreSQL runs inside the local kind cluster with documented non-secret local credentials or documented local secret creation steps
+- **AND** the API `DATABASE_URL` points at the in-cluster PostgreSQL service
+- **AND** the workflow documents how migrations are applied before readiness smoke validation
 
 #### Scenario: Runtime configuration uses local-safe values
 
@@ -44,7 +58,7 @@ FlagForge SHALL provide a basic smoke validation path for the local kind workflo
 #### Scenario: Smoke check validates API reachability
 
 - **WHEN** the local kind cluster is running and FlagForge has been deployed
-- **THEN** the documented smoke check proves a FlagForge operational endpoint such as `GET /healthz` or `GET /readyz` is reachable through the documented local access path
+- **THEN** the documented smoke check proves a FlagForge operational endpoint such as `GET /healthz` or `GET /readyz` is reachable through the documented local access path after PostgreSQL and migrations are ready
 - **AND** the smoke check fails when the API is not reachable
 
 #### Scenario: Kind smoke validation remains outside verify
@@ -65,10 +79,11 @@ FlagForge SHALL document setup, reset, limitations, and troubleshooting for the 
 #### Scenario: Level 1 scope limits are documented
 
 - **WHEN** a contributor reads the local kind documentation
-- **THEN** it states that kind is a Level 1 local simulation environment
+- **THEN** it prominently states that kind is a Level 1 local simulation environment
 - **AND** it states that the workflow is not production Kubernetes, AWS, or EKS
+- **AND** it does not present kind readiness as proof of production Kubernetes readiness
 
 #### Scenario: Troubleshooting guidance exists
 
 - **WHEN** a contributor reads the local kind documentation
-- **THEN** it includes troubleshooting guidance for common local failures such as missing CLIs, Docker not running, cluster creation failure, image availability, and API readiness failure
+- **THEN** it includes troubleshooting guidance for common local failures such as missing CLIs, Docker not running, cluster creation failure, image availability, PostgreSQL readiness, migration failure, and API readiness failure
