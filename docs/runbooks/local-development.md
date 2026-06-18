@@ -199,6 +199,95 @@ kubectl delete namespace ${KIND_NAMESPACE:-flagforge}
 make kind-namespace
 ```
 
+## Local Argo CD GitOps
+
+The local Argo CD workflow is Level 1 local platform practice. It does not claim AWS, EKS, production promotion, production rollout, or production secret management support.
+
+Prerequisites:
+
+- A local Kubernetes cluster, preferably the existing kind path selected for local platform work.
+- The API image expected by `charts/flagforge-api/values-local.yaml` available to the cluster, such as `flagforge-api:local` loaded into kind.
+- PostgreSQL reachable from the API workload at the local value `postgres://flagforge:flagforge@postgres:5432/flagforge`, or an intentionally configured replacement Secret.
+- `kubectl` pointed at the local cluster.
+- Argo CD installed in the local cluster with either CLI access through `argocd` or UI access through a local port-forward.
+- Helm chart validation completed with the local values file before relying on Argo CD reconciliation.
+
+The source-controlled Application lives at `infra/argocd/flagforge-api-local-application.yaml`. It points Argo CD at the existing `charts/flagforge-api` Helm chart and `charts/flagforge-api/values-local.yaml`; it does not define Argo CD-specific raw Deployment, Service, ConfigMap, or Secret manifests for the API workload.
+
+Prepare the local deployment inputs before sync:
+
+```bash
+docker build -t flagforge-api:local .
+kind load docker-image flagforge-api:local
+helm lint charts/flagforge-api -f charts/flagforge-api/values-local.yaml
+helm template flagforge-api charts/flagforge-api -f charts/flagforge-api/values-local.yaml
+```
+
+Apply the Application definition:
+
+```bash
+kubectl apply -f infra/argocd/flagforge-api-local-application.yaml
+```
+
+Sync through the Argo CD CLI:
+
+```bash
+argocd app get flagforge-api-local
+argocd app sync flagforge-api-local
+argocd app wait flagforge-api-local --sync --health --timeout 180
+```
+
+If using the UI, port-forward the Argo CD server and sync `flagforge-api-local` from the application page:
+
+```bash
+kubectl -n argocd port-forward svc/argocd-server 8080:443
+```
+
+The expected healthy local state is `Synced` and `Healthy`. If sync fails, collect actionable details before changing desired state:
+
+```bash
+argocd app get flagforge-api-local
+argocd app diff flagforge-api-local
+kubectl -n flagforge get pods,svc
+kubectl -n flagforge describe pods
+```
+
+Inspect drift and trigger resync after an intentional local change:
+
+```bash
+argocd app diff flagforge-api-local
+argocd app sync flagforge-api-local
+argocd app wait flagforge-api-local --sync --health --timeout 180
+```
+
+Validate the runtime endpoint after the application is synced and healthy:
+
+```bash
+kubectl -n flagforge port-forward svc/flagforge-api 3000:3000
+curl --fail http://localhost:3000/healthz
+curl -i http://localhost:3000/readyz
+```
+
+The committed Application uses `targetRevision: main` as the reusable mainline-safe desired state. To validate an unmerged feature branch or exact commit in a local Argo CD application, patch the local Application after the branch or SHA has been pushed:
+
+```bash
+argocd app set flagforge-api-local --revision feat/23/add-argocd-gitops
+argocd app sync flagforge-api-local
+argocd app wait flagforge-api-local --sync --health --timeout 180
+```
+
+Use a commit SHA in place of the branch name when validating an immutable revision. Do not commit branch-specific, worktree-specific, or personal target revisions to `infra/argocd/flagforge-api-local-application.yaml`.
+
+Cleanup local GitOps state:
+
+```bash
+argocd app delete flagforge-api-local --cascade
+kubectl delete -f infra/argocd/flagforge-api-local-application.yaml --ignore-not-found
+kubectl delete namespace flagforge --ignore-not-found
+```
+
+The local values use non-secret development defaults such as `dev-admin-api-key`. Do not commit production secrets, personal credentials, cloud credentials, or copied cluster tokens. For local experiments that need different sensitive values, create a local Kubernetes Secret and point Helm values at it with `secret.existingSecret`; do not commit those values. This local-safe handling is not a production secret management strategy.
+
 ## API Contract
 
 The canonical API contract is `docs/api/openapi.yaml`.

@@ -63,6 +63,26 @@ helm template flagforge-api charts/flagforge-api -f charts/flagforge-api/values-
 
 The chart renders the API Deployment, Service, runtime ConfigMap, and chart-managed Secret by default. Set `secret.existingSecret` to reference externally managed `DATABASE_URL` and `ADMIN_API_KEY` values without rendering a duplicate Secret. Helm validation is an explicit platform packaging check and is not part of the host-only `npm run verify` gate.
 
+## Local Argo CD
+
+The local Argo CD desired-state entrypoint is `infra/argocd/flagforge-api-local-application.yaml`. It uses the existing Helm chart at `charts/flagforge-api`, the local values file, and `targetRevision: main` for reusable mainline desired state.
+
+Apply and sync it only after local Kubernetes, Argo CD, the local API image, and Helm chart validation are ready:
+
+```bash
+kubectl apply -f infra/argocd/flagforge-api-local-application.yaml
+argocd app sync flagforge-api-local
+argocd app wait flagforge-api-local --sync --health --timeout 180
+```
+
+For feature-branch validation, patch the local Argo CD application target revision after pushing the branch or commit SHA instead of committing branch-specific revisions:
+
+```bash
+argocd app set flagforge-api-local --revision feat/23/add-argocd-gitops
+```
+
+Local GitOps sync, drift inspection, runtime endpoint validation, cleanup, and local-safe secret guidance are documented in `docs/runbooks/local-development.md`. This workflow remains outside `npm run verify` and is limited to Level 1 local platform practice.
+
 ## API Contract
 
 The canonical OpenAPI contract lives at `docs/api/openapi.yaml`.
