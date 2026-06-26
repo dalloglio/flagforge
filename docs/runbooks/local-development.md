@@ -120,6 +120,85 @@ Sensitive runtime values use a chart-managed Secret by default for local use. To
 
 Helm lint/template checks are explicit platform packaging checks. They remain outside `npm run verify`, which is the host-only completion gate.
 
+## Local kind Kubernetes
+
+kind is a Level 1 local simulation environment for practicing the FlagForge Kubernetes path. It is not production Kubernetes, AWS, or EKS, and a passing kind smoke check does not prove production Kubernetes readiness.
+
+The source-controlled kind cluster configuration lives at `infra/kind/cluster.yaml`. The default local cluster name is `flagforge-local`. Override it for parallel worktrees by setting `KIND_CLUSTER`, for example `KIND_CLUSTER=flagforge-exp-17 make kind-create`. The namespace defaults to `flagforge` and can be overridden with `KIND_NAMESPACE`.
+
+Prerequisites:
+
+- Docker is installed and running.
+- `kind`, `kubectl`, and Helm are installed.
+- Node.js dependencies are installed with `npm install`.
+- The local API image exists as `flagforge-api:local`.
+- PostgreSQL is running inside kind and ready.
+- Migrations have been applied before API readiness validation.
+
+Create the cluster and prepare the namespace:
+
+```bash
+make kind-create
+make kind-namespace
+```
+
+Build and load the API image into kind:
+
+```bash
+make docker-build
+make kind-load-image
+```
+
+Start PostgreSQL inside the kind cluster with local-only credentials:
+
+```bash
+make kind-postgres
+make kind-postgres-wait
+```
+
+The local PostgreSQL manifest lives at `infra/kind/postgres.yaml`. It is only for Level 1 local practice and uses non-secret development credentials: database `flagforge`, user `flagforge`, password `flagforge`, and service `postgres` inside the selected namespace.
+
+Apply migrations from the host through a temporary PostgreSQL port-forward:
+
+```bash
+kubectl -n ${KIND_NAMESPACE:-flagforge} port-forward svc/postgres 15432:5432
+DATABASE_URL=postgres://flagforge:flagforge@localhost:15432/flagforge npm run db:migrate
+```
+
+Run the `kubectl port-forward` command in one terminal and the migration command in another. Stop the port-forward after migrations succeed.
+
+Deploy the API through the Helm chart:
+
+```bash
+make kind-helm-deploy
+kubectl -n ${KIND_NAMESPACE:-flagforge} rollout status deploy/flagforge-api --timeout=120s
+```
+
+The kind workflow uses `charts/flagforge-api/values-local.yaml`. The API `DATABASE_URL` is rendered into the chart-managed local Secret as `postgres://flagforge:flagforge@postgres:5432/flagforge`, which targets the in-cluster PostgreSQL Service. `ADMIN_API_KEY` uses the non-secret local default `dev-admin-api-key`. For an externally created Secret, create it in the `flagforge` namespace and set `secret.existingSecret`, `secret.keys.databaseUrl`, and `secret.keys.adminApiKey` in a local values override.
+
+Validate API reachability through a temporary Service port-forward:
+
+```bash
+make kind-api-port-forward
+make kind-smoke-ready
+```
+
+Run the `kind-api-port-forward` target in one terminal and the smoke target in another. `kind-smoke-ready` calls `GET /readyz` through `http://localhost:${KIND_API_PORT:-3000}` and fails if the API is not reachable or not ready.
+
+Reset the local cluster:
+
+```bash
+make kind-delete
+make kind-create
+```
+
+To remove only the FlagForge namespace resources:
+
+```bash
+kubectl delete namespace ${KIND_NAMESPACE:-flagforge}
+make kind-namespace
+```
+
 ## API Contract
 
 The canonical API contract is `docs/api/openapi.yaml`.
@@ -222,6 +301,14 @@ make docker-build
 make compose-up
 make smoke-health
 make smoke-gateway
+make kind-create
+make kind-load-image
+make kind-postgres
+make kind-postgres-wait
+make kind-helm-deploy
+make kind-api-port-forward
+make kind-smoke-ready
+make kind-delete
 make verify
 ```
 
@@ -241,6 +328,22 @@ If gateway `/health` fails but direct app `/health` works, check `docker compose
 
 If the gateway host port is unavailable, set `KONG_PROXY_PORT` to an unused port and restart the Kong service. Keep the direct API `PORT` and gateway `KONG_PROXY_PORT` distinct in parallel worktrees.
 
+If `kind` is missing, install the kind CLI and retry `make kind-create`. If Docker is not running, start Docker before creating or deleting clusters.
+
+If cluster creation fails, check for an existing cluster with `kind get clusters`, use `make kind-delete` for the selected `KIND_CLUSTER`, or choose a unique `KIND_CLUSTER` for the worktree.
+
+If `kubectl` cannot find the cluster, confirm `kind get clusters` lists the selected cluster and switch context with `kubectl config use-context kind-${KIND_CLUSTER:-flagforge-local}`.
+
+If `helm` is missing, install Helm before running `make kind-helm-deploy`. Use `helm lint charts/flagforge-api -f charts/flagforge-api/values-local.yaml` to isolate chart rendering problems before deploying.
+
+If `make kind-load-image` fails, confirm `make docker-build` created `flagforge-api:local` and that the selected kind cluster exists.
+
+If PostgreSQL readiness fails, inspect `kubectl -n ${KIND_NAMESPACE:-flagforge} get pods`, `kubectl -n ${KIND_NAMESPACE:-flagforge} describe statefulset/postgres`, and `kubectl -n ${KIND_NAMESPACE:-flagforge} logs statefulset/postgres`.
+
+If migrations fail, confirm the PostgreSQL port-forward is still running, `DATABASE_URL` uses `localhost:15432`, and the PostgreSQL pod is ready.
+
+If API readiness fails, inspect `kubectl -n ${KIND_NAMESPACE:-flagforge} get pods`, `kubectl -n ${KIND_NAMESPACE:-flagforge} logs deploy/flagforge-api`, confirm migrations completed, and confirm the chart Secret contains a `DATABASE_URL` that points to the in-cluster `postgres` Service.
+
 ## Out of Scope
 
-Local Kong does not add authentication, authorization, production hardening, kind, Argo CD, cloud deployment, registry publishing, or observability. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
+Local Kong and kind workflows do not add authentication, authorization, production hardening, Argo CD, cloud deployment, registry publishing, or observability. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
