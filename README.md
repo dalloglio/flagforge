@@ -39,12 +39,15 @@ curl --fail http://localhost:3000/health
 curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
 docker compose up -d kong
 curl --fail http://localhost:8000/health
+docker compose up -d app prometheus grafana
+curl --fail http://localhost:9090/api/v1/targets
+curl --fail http://localhost:3001/api/health
 npm run openapi:validate
 npm run openapi:preview
 npm run verify
 ```
 
-Use `npm run verify` before treating implementation work as complete. It runs host-only checks, including OpenAPI validation, and does not require Docker or PostgreSQL. Run PostgreSQL integration, Docker build, and Compose smoke checks explicitly when those tools are available.
+Use `npm run verify` before treating implementation work as complete. It runs host-only checks, including OpenAPI validation, and does not require Docker, Docker Compose, PostgreSQL, Prometheus, Grafana, Kubernetes, or running observability services. Run PostgreSQL integration, Docker build, Compose smoke checks, and observability smoke checks explicitly when those tools are available.
 
 ## Helm
 
@@ -166,6 +169,18 @@ make smoke-gateway
 
 Kong uses DB-less declarative configuration from `infra/kong/kong.yml` and routes to the Compose `app` service. Direct app access remains available through `${PORT:-3000}`. Override the gateway host port with `KONG_PROXY_PORT`; Kong defaults to `8000`. Kong Admin API ports are not published by default.
 
+Run local Prometheus and Grafana after the Compose app is available:
+
+```bash
+docker compose up -d app prometheus grafana
+curl --fail "http://localhost:${PROMETHEUS_PORT:-9090}/api/v1/query?query=up%7Bjob%3D%22flagforge-api%22%7D"
+curl --fail http://localhost:${GRAFANA_PORT:-3001}/api/health
+make smoke-prometheus
+make smoke-grafana
+```
+
+Prometheus scrapes the existing `GET /metrics` endpoint through the Compose-network target `app:3000`. Grafana provisions the `FlagForge Prometheus` datasource and `FlagForge Local Overview` dashboard from `infra/observability/grafana/`. Open `http://localhost:${PROMETHEUS_PORT:-9090}/targets` to inspect scrape target health and `http://localhost:${GRAFANA_PORT:-3001}` to view the dashboard. This Level 1 local workflow uses Prometheus and Grafana only; it does not provide kind/Kubernetes observability, production SLOs, alerting, OpenTelemetry Collector deployment, AWS observability, Datadog, or vendor-managed monitoring.
+
 ## Make Targets
 
 ```bash
@@ -177,9 +192,12 @@ make test-postgres
 make build
 make docker-build
 make compose-up
+make observability-up
 make smoke-health
 make smoke-gateway
+make smoke-prometheus
+make smoke-grafana
 make verify
 ```
 
-The local Kong workflow does not add authentication, authorization, rate limiting, production hardening, Helm, kind, Argo CD, cloud deployment, registry publishing, or observability.
+The local Kong workflow does not add authentication, authorization, rate limiting, production hardening, Helm, kind, Argo CD, cloud deployment, registry publishing, or observability. Local Prometheus and Grafana validation remains outside `npm run verify`.

@@ -9,7 +9,7 @@ HELM_RELEASE ?= flagforge-api
 HELM_CHART ?= charts/flagforge-api
 HELM_VALUES ?= charts/flagforge-api/values-local.yaml
 
-.PHONY: dev db-up db-test-up db-migrate test test-unit test-postgres build docker-build compose-up smoke-health smoke-gateway kind-create kind-delete kind-namespace kind-load-image kind-postgres kind-postgres-wait kind-helm-deploy kind-api-port-forward kind-smoke-ready typecheck lint format-check verify openspec-validate
+.PHONY: dev db-up db-test-up db-migrate test test-unit test-postgres build docker-build compose-up observability-up smoke-health smoke-gateway smoke-prometheus smoke-grafana kind-create kind-delete kind-namespace kind-load-image kind-postgres kind-postgres-wait kind-helm-deploy kind-api-port-forward kind-smoke-ready typecheck lint format-check verify openspec-validate
 
 dev:
 	npm run dev
@@ -40,6 +40,9 @@ docker-build:
 
 compose-up:
 	docker compose up -d app
+
+observability-up:
+	docker compose up -d app prometheus grafana
 
 smoke-health:
 	curl --fail http://localhost:$${PORT:-3000}/health
@@ -73,6 +76,13 @@ kind-api-port-forward:
 
 kind-smoke-ready:
 	curl --fail http://localhost:$(KIND_API_PORT)/readyz
+
+smoke-prometheus:
+	curl --fail --silent "http://localhost:$${PROMETHEUS_PORT:-9090}/api/v1/query?query=up%7Bjob%3D%22flagforge-api%22%7D" | node -e 'let d = ""; process.stdin.on("data", (c) => d += c).on("end", () => { const body = JSON.parse(d); const isUp = body.status === "success" && body.data?.result?.some((series) => series.value?.[1] === "1"); if (!isUp) { console.error("flagforge-api Prometheus target is not UP"); process.exit(1); } });'
+
+smoke-grafana:
+	curl --fail http://localhost:$${GRAFANA_PORT:-3001}/api/health
+	curl --fail --silent http://localhost:$${GRAFANA_PORT:-3001}/api/dashboards/uid/flagforge-local-overview >/dev/null
 
 typecheck:
 	npm run typecheck

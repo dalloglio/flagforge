@@ -11,6 +11,8 @@ ADMIN_API_KEY=dev-admin-api-key
 ADMIN_RATE_LIMIT_REQUESTS=60
 ADMIN_RATE_LIMIT_WINDOW_MS=60000
 KONG_PROXY_PORT=8000
+PROMETHEUS_PORT=9090
+GRAFANA_PORT=3001
 DATABASE_PORT=5432
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5432/flagforge
 TEST_DATABASE_PORT=5433
@@ -32,6 +34,8 @@ ADMIN_API_KEY=dev-admin-api-key
 ADMIN_RATE_LIMIT_REQUESTS=60
 ADMIN_RATE_LIMIT_WINDOW_MS=60000
 KONG_PROXY_PORT=8017
+PROMETHEUS_PORT=9117
+GRAFANA_PORT=3117
 DATABASE_PORT=5417
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5417/flagforge
 TEST_DATABASE_PORT=54317
@@ -377,6 +381,68 @@ curl --fail http://localhost:8017/health
 
 Kong Admin API ports are not published to the host by default. The local gateway workflow does not require host access to the Kong Admin API because Kong loads the checked-in declarative configuration at startup.
 
+## Local Prometheus and Grafana
+
+Prometheus and Grafana run locally through Docker Compose. Prometheus reads `infra/observability/prometheus/prometheus.yml` and scrapes the existing FlagForge `GET /metrics` endpoint at the Compose-network target `app:3000`. Grafana reads source-controlled provisioning from `infra/observability/grafana/provisioning` and loads the basic dashboard from `infra/observability/grafana/dashboards`.
+
+Start the API, Prometheus, and Grafana after migrations have prepared the database:
+
+```bash
+docker compose up -d postgres
+npm run db:migrate
+docker compose up -d app prometheus grafana
+```
+
+The same workflow is available through the Makefile:
+
+```bash
+make observability-up
+```
+
+Prometheus is bound to loopback and available at `http://localhost:${PROMETHEUS_PORT:-9090}`. Inspect target health at `http://localhost:${PROMETHEUS_PORT:-9090}/targets` and confirm the `flagforge-api` target is `UP`. The Prometheus scrape target is `app:3000` inside the Compose network, not the host `localhost` port.
+
+Generate at least one request metric before validating dashboard panels:
+
+```bash
+curl --fail http://localhost:${PORT:-3000}/health
+curl --fail http://localhost:${PORT:-3000}/metrics
+```
+
+Validate that Prometheus can query FlagForge metrics and that the `flagforge-api` scrape target is `UP`:
+
+```bash
+curl --fail "http://localhost:${PROMETHEUS_PORT:-9090}/api/v1/query?query=up%7Bjob%3D%22flagforge-api%22%7D"
+curl --fail "http://localhost:${PROMETHEUS_PORT:-9090}/api/v1/query?query=http_requests_total"
+make smoke-prometheus
+```
+
+Grafana is bound to loopback and available at `http://localhost:${GRAFANA_PORT:-3001}`. Anonymous local viewer access is enabled for this Level 1 workflow. Open the `FlagForge / FlagForge Local Overview` dashboard and confirm the `FlagForge Prometheus` datasource is connected.
+
+Validate Grafana service health and dashboard provisioning:
+
+```bash
+curl --fail http://localhost:${GRAFANA_PORT:-3001}/api/health
+curl --fail http://localhost:${GRAFANA_PORT:-3001}/api/dashboards/uid/flagforge-local-overview
+make smoke-grafana
+```
+
+If the dashboard is empty, wait for Prometheus to scrape, send a few API requests, and refresh the dashboard. The dashboard visualizes existing `http_requests_total`, `http_request_duration_seconds_bucket`, and `process_resident_memory_bytes` metrics; this workflow does not add, rename, relabel, or otherwise change application instrumentation.
+
+Stop the local observability services:
+
+```bash
+docker compose stop prometheus grafana
+```
+
+Reset local observability state, including Prometheus samples:
+
+```bash
+docker compose down
+docker volume rm ${COMPOSE_PROJECT_NAME:-flagforge}_flagforge-prometheus-data
+```
+
+This is a Level 1 local observability practice path using Prometheus and Grafana only. It does not provide kind or Kubernetes observability, production SLOs, alerting, OpenTelemetry Collector coverage, AWS observability, EKS observability, Datadog, or vendor-managed monitoring.
+
 ## Makefile Shortcuts
 
 ```bash
@@ -388,6 +454,7 @@ make test-postgres
 make build
 make docker-build
 make compose-up
+make observability-up
 make smoke-health
 make smoke-gateway
 make kind-create
@@ -398,6 +465,8 @@ make kind-helm-deploy
 make kind-api-port-forward
 make kind-smoke-ready
 make kind-delete
+make smoke-prometheus
+make smoke-grafana
 make verify
 ```
 
@@ -433,6 +502,16 @@ If migrations fail, confirm the PostgreSQL port-forward is still running, `DATAB
 
 If API readiness fails, inspect `kubectl -n ${KIND_NAMESPACE:-flagforge} get pods`, `kubectl -n ${KIND_NAMESPACE:-flagforge} logs deploy/flagforge-api`, confirm migrations completed, and confirm the chart Secret contains a `DATABASE_URL` that points to the in-cluster `postgres` Service.
 
+If Prometheus reports the `flagforge-api` target as down, confirm `docker compose ps app prometheus`, check `docker compose logs app prometheus`, and verify `infra/observability/prometheus/prometheus.yml` still uses `metrics_path: /metrics` and target `app:3000`.
+
+If Prometheus has no FlagForge metrics, call `curl --fail http://localhost:${PORT:-3000}/metrics`, generate API traffic, wait for the next scrape interval, and query `up{job="flagforge-api"}` and `http_requests_total` in Prometheus.
+
+If Grafana cannot query Prometheus, check `docker compose ps grafana prometheus`, inspect `docker compose logs grafana`, and confirm the provisioned datasource URL is `http://prometheus:9090` inside the Compose network.
+
+If the Grafana dashboard is missing, recreate Grafana with `docker compose up -d --force-recreate grafana`, check provisioning logs, and confirm `infra/observability/grafana/provisioning/dashboards/flagforge.yml` points at `/var/lib/grafana/dashboards`.
+
+If Prometheus or Grafana host ports are unavailable, set `PROMETHEUS_PORT` or `GRAFANA_PORT` to unused ports and restart the services. Keep `PORT`, `KONG_PROXY_PORT`, `PROMETHEUS_PORT`, and `GRAFANA_PORT` distinct in parallel worktrees.
+
 ## Out of Scope
 
-Local Kong and kind workflows do not add authentication, authorization, production hardening, Argo CD, cloud deployment, registry publishing, or observability. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
+Local Kong and kind workflows do not add authentication, authorization, production hardening, Argo CD, cloud deployment, registry publishing, or observability. Local Prometheus and Grafana do not add production SLOs, alerting, OpenTelemetry Collector deployment, AWS observability, EKS observability, Datadog, or vendor-managed monitoring. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
