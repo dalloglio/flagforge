@@ -78,10 +78,11 @@ kind-smoke-ready:
 	curl --fail http://localhost:$(KIND_API_PORT)/readyz
 
 smoke-prometheus:
-	curl --fail http://localhost:$${PROMETHEUS_PORT:-9090}/api/v1/targets
+	curl --fail --silent "http://localhost:$${PROMETHEUS_PORT:-9090}/api/v1/query?query=up%7Bjob%3D%22flagforge-api%22%7D" | node -e 'let d = ""; process.stdin.on("data", (c) => d += c).on("end", () => { const body = JSON.parse(d); const isUp = body.status === "success" && body.data?.result?.some((series) => series.value?.[1] === "1"); if (!isUp) { console.error("flagforge-api Prometheus target is not UP"); process.exit(1); } });'
 
 smoke-grafana:
 	curl --fail http://localhost:$${GRAFANA_PORT:-3001}/api/health
+	curl --fail --silent http://localhost:$${GRAFANA_PORT:-3001}/api/dashboards/uid/flagforge-local-overview >/dev/null
 
 typecheck:
 	npm run typecheck

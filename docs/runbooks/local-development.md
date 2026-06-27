@@ -35,7 +35,7 @@ ADMIN_RATE_LIMIT_REQUESTS=60
 ADMIN_RATE_LIMIT_WINDOW_MS=60000
 KONG_PROXY_PORT=8017
 PROMETHEUS_PORT=9117
-GRAFANA_PORT=3017
+GRAFANA_PORT=3117
 DATABASE_PORT=5417
 DATABASE_URL=postgres://flagforge:flagforge@localhost:5417/flagforge
 TEST_DATABASE_PORT=54317
@@ -399,7 +399,7 @@ The same workflow is available through the Makefile:
 make observability-up
 ```
 
-Prometheus is available at `http://localhost:${PROMETHEUS_PORT:-9090}`. Inspect target health at `http://localhost:${PROMETHEUS_PORT:-9090}/targets` and confirm the `flagforge-api` target is `UP`. The Prometheus scrape target is `app:3000` inside the Compose network, not the host `localhost` port.
+Prometheus is bound to loopback and available at `http://localhost:${PROMETHEUS_PORT:-9090}`. Inspect target health at `http://localhost:${PROMETHEUS_PORT:-9090}/targets` and confirm the `flagforge-api` target is `UP`. The Prometheus scrape target is `app:3000` inside the Compose network, not the host `localhost` port.
 
 Generate at least one request metric before validating dashboard panels:
 
@@ -408,7 +408,7 @@ curl --fail http://localhost:${PORT:-3000}/health
 curl --fail http://localhost:${PORT:-3000}/metrics
 ```
 
-Validate that Prometheus can query FlagForge metrics:
+Validate that Prometheus can query FlagForge metrics and that the `flagforge-api` scrape target is `UP`:
 
 ```bash
 curl --fail "http://localhost:${PROMETHEUS_PORT:-9090}/api/v1/query?query=up%7Bjob%3D%22flagforge-api%22%7D"
@@ -416,12 +416,13 @@ curl --fail "http://localhost:${PROMETHEUS_PORT:-9090}/api/v1/query?query=http_r
 make smoke-prometheus
 ```
 
-Grafana is available at `http://localhost:${GRAFANA_PORT:-3001}`. Anonymous local viewer access is enabled for this Level 1 workflow. Open the `FlagForge / FlagForge Local Overview` dashboard and confirm the `FlagForge Prometheus` datasource is connected.
+Grafana is bound to loopback and available at `http://localhost:${GRAFANA_PORT:-3001}`. Anonymous local viewer access is enabled for this Level 1 workflow. Open the `FlagForge / FlagForge Local Overview` dashboard and confirm the `FlagForge Prometheus` datasource is connected.
 
-Validate Grafana service health:
+Validate Grafana service health and dashboard provisioning:
 
 ```bash
 curl --fail http://localhost:${GRAFANA_PORT:-3001}/api/health
+curl --fail http://localhost:${GRAFANA_PORT:-3001}/api/dashboards/uid/flagforge-local-overview
 make smoke-grafana
 ```
 
