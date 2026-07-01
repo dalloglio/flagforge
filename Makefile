@@ -81,7 +81,7 @@ kind-smoke-ready:
 
 iac-aws-fmt-check:
 	tofu fmt -check -recursive $(AWS_IAC_DIR)/modules
-	terragrunt hclfmt --check --working-dir $(AWS_IAC_DIR)
+	terragrunt hcl format --check --working-dir $(AWS_IAC_DIR)
 
 iac-aws-validate:
 	tofu -chdir=$(AWS_IAC_MODULE_DIR) init -backend=false

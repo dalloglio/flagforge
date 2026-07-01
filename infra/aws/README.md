@@ -68,7 +68,7 @@ The targets are thin wrappers around local CLI checks:
 - `tofu fmt -check -recursive infra/aws/modules`
 - `tofu -chdir=infra/aws/modules/foundation init -backend=false`
 - `tofu -chdir=infra/aws/modules/foundation validate`
-- `terragrunt hclfmt --check --working-dir infra/aws`
+- `terragrunt hcl format --check --working-dir infra/aws`
 
 Missing `tofu` or `terragrunt` should fail as a local prerequisite issue, not as missing cloud access. These targets must not run account-backed `plan`, `apply`, `destroy`, import, state mutation, unlock, taint, `terragrunt run-all apply`, `terragrunt run-all destroy`, or `--auto-approve`.
 
