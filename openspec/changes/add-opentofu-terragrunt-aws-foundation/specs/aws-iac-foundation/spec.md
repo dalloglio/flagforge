@@ -89,6 +89,36 @@ FlagForge SHALL document guardrails for future AWS IaC changes before resource-p
 - **WHEN** a contributor reads the AWS IaC foundation documentation
 - **THEN** it states that secrets, personal AWS credentials, production kubeconfigs, and copied cloud tokens must not be committed
 - **AND** it identifies IAM/OIDC and secret management as future resource-producing design topics
+- **AND** it states that local AWS profile names are optional placeholders for future account-backed workflows and are not required for credential-free validation
+- **AND** it states that profile names, SSO URLs, account IDs, credentials, and personal workstation configuration must not be committed in `.env`, `.tfvars`, backend configuration, provider files, generated Terragrunt files, or examples
+
+#### Scenario: Sensitive data minimization is explicit
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation
+- **THEN** it states that examples, variables, outputs, tags, resource names, and documentation must avoid personal data, customer data, secrets, real account IDs, production-only identifiers, and LGPD-relevant data unless a future reviewed change explicitly requires them
+- **AND** it states that outputs must not expose secrets or sensitive values
+- **AND** it states that placeholder values must be clearly non-sensitive examples
+
+#### Scenario: State plans logs and outputs are sensitive artifacts
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation
+- **THEN** it states that OpenTofu/Terragrunt state files, plan files, command logs, generated provider files, and outputs can expose sensitive infrastructure metadata or LGPD-relevant configuration
+- **AND** it requires those artifacts to stay out of source control unless a future reviewed change explicitly permits a safe example artifact
+- **AND** it requires future remote-state or account-backed workflow changes to document retention, access control, encryption, and disposal expectations for generated IaC artifacts
+
+#### Scenario: Least privilege is required for future IAM and OIDC
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation
+- **THEN** it states that future IAM/OIDC changes must use least-privilege policies, scoped trust relationships, short-lived credentials, and environment-specific roles
+- **AND** it states that administrator policies, wildcard permissions, broad principals, long-lived access keys, and shared personal credentials must not be used as defaults
+- **AND** it requires Security/LGPD review before any IAM/OIDC, CI plan, or apply-capable workflow is introduced
+
+#### Scenario: Mandatory tags are explicit
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation
+- **THEN** it defines a mandatory baseline tag convention for future AWS resources, including project, environment, managed-by, ownership, and cost-allocation metadata or documented equivalents
+- **AND** it states that tag values must not contain personal data, secrets, customer data, real account IDs, or production-only identifiers in examples
+- **AND** it requires future resource-producing changes to show how mandatory tags are applied or explain why a resource cannot support them
 
 #### Scenario: Cost guardrails are explicit
 

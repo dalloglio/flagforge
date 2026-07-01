@@ -11,7 +11,8 @@ This change starts Level 3 by adding the IaC foundation only. It should make lat
 - Establish a source-controlled OpenTofu/Terragrunt layout for future AWS work.
 - Define conventions for modules, live environments, provider configuration, backend/state assumptions, variable naming, tags, and outputs.
 - Provide validation commands for formatting and static checks that can run locally without AWS credentials.
-- Document cost, secrets, environment, and provisioning guardrails.
+- Document cost, secrets, environment, Security/LGPD, and provisioning guardrails.
+- Define security conventions for mandatory tags, least-privilege future IAM/OIDC, local AWS profile usage, and sensitive artifact handling.
 - Keep validation, future planning, and future apply behavior explicit and separate.
 - Document operational runbook expectations, future remote-state prerequisites, and rollback/cleanup expectations for resource-producing AWS changes.
 
@@ -56,6 +57,38 @@ Remote state, AWS profiles, account IDs, OIDC roles, and secrets handling should
 Rationale: state and identity are high-impact platform decisions. Treating them as documentation and guardrails now keeps this foundation useful without locking in unsafe defaults.
 
 Alternative considered: configure a real S3/DynamoDB backend immediately. That would require preexisting AWS resources or create a bootstrap problem outside the scope of this change.
+
+### Treat state, plans, logs, and outputs as sensitive artifacts
+
+OpenTofu/Terragrunt state files, generated plan files, command logs, and outputs should be treated as sensitive even before production resources exist. The foundation should document that these artifacts can expose infrastructure topology, generated identifiers, provider metadata, secret references, and potentially LGPD-relevant configuration. Examples, tags, resource names, variable values, and outputs should avoid personal data and production identifiers by default.
+
+Rationale: IaC metadata often becomes an accidental data disclosure path. Treating state and generated artifacts as sensitive from the foundation prevents unsafe habits before remote state and resource-producing workflows exist.
+
+Alternative considered: only block obvious secrets such as access keys. That misses lower-signal sensitive data such as account identifiers, internal topology, personal names in tags, and values captured in plan/state output.
+
+### Require least-privilege future IAM/OIDC assumptions
+
+Future IAM/OIDC work should use short-lived credentials, scoped trust relationships, environment-specific roles, explicit audience/subject constraints where applicable, and least-privilege policies. Future changes must not default to administrator access, wildcard permissions, broad principals, long-lived access keys, or shared personal credentials for automation.
+
+Rationale: IAM/OIDC is a security boundary, not just an implementation detail. Establishing least privilege as a required future criterion keeps account bootstrap, CI plan, and apply workflows reviewable before credentials are introduced.
+
+Alternative considered: defer IAM/OIDC permission details until implementation. That would make it easy for the first account-backed workflow to choose broad access for convenience and normalize unsafe defaults.
+
+### Require mandatory governance tags without sensitive values
+
+The foundation should define a baseline mandatory tag convention for future AWS resources, such as project, environment, managed-by, owner or team, and cost-allocation fields. Tag values must use non-sensitive project/team identifiers and must not include personal data, secrets, real account IDs, customer data, or production-only identifiers in examples.
+
+Rationale: tags are needed for cost allocation, ownership, cleanup, and auditability, but they can also leak sensitive data if treated as free-form labels.
+
+Alternative considered: leave tags as informal documentation. That would make later cost, ownership, and cleanup reviews inconsistent across resources and environments.
+
+### Keep local AWS profiles optional and non-secret
+
+Local AWS profile names may be documented only as placeholders for future account-backed work and must not be required for credential-free validation. Profile names, SSO start URLs, account IDs, credentials, and personal workstation configuration must not be committed in `.env`, `.tfvars`, backend configuration, provider files, generated Terragrunt files, or examples.
+
+Rationale: local profile usage is useful for future manual workflows, but profile names and account metadata can leak environment details and create hidden dependencies in validation commands.
+
+Alternative considered: standardize on one local profile now. That would make validation depend on local account setup before this foundation has a reviewed account or remote-state model.
 
 ### Separate validate, plan, and apply workflows
 
@@ -109,6 +142,8 @@ Alternative considered: defer rollback until production deployment. That would a
 - [Risk] `plan` may be treated as a harmless validation command even though it can require credentials, backend initialization, provider access, and current state. -> Mitigation: keep `plan` out of this foundation and require a later account-backed workflow change.
 - [Risk] Future rollback may be reduced to `destroy`, which is unsafe for persistent or shared resources. -> Mitigation: require rollback and cleanup documentation for each resource-producing change.
 - [Risk] Remote-state placeholders may become de facto production configuration. -> Mitigation: document remote state as a separate bootstrap decision with locking, encryption, access, and recovery requirements.
+- [Risk] State, plan, logs, outputs, tags, or examples can expose sensitive metadata or LGPD-relevant data. -> Mitigation: classify generated IaC artifacts as sensitive, avoid personal data in examples and tags, and require no sensitive outputs.
+- [Risk] Future IAM/OIDC workflows may start with broad permissions for convenience. -> Mitigation: require least-privilege roles, scoped trust policies, short-lived credentials, and Security/LGPD review before account-backed workflows.
 
 ## Migration Plan
 
@@ -117,6 +152,8 @@ No runtime migration is required. Implement the IaC foundation files, documentat
 ## Open Questions
 
 - Which AWS account naming convention and remote state bootstrap process will be accepted for the first resource-producing AWS change?
+- Which exact mandatory tag set should be accepted for all future AWS resources?
+- Which IAM/OIDC trust-policy shape should be accepted for the first account-backed GitHub Actions or local plan workflow?
 - Should future AWS changes introduce ECR first as the lowest-risk real resource, or start with account/bootstrap prerequisites before application resources?
 - What monthly-cost estimate format should future AWS resource-producing changes use?
 - Which rollback evidence should be required before resource-producing AWS changes are considered complete?

@@ -4,18 +4,24 @@
 - [ ] 1.2 Add foundation-only OpenTofu/Terragrunt files for version constraints, provider assumptions, common inputs, tags, and environment layout without declaring managed AWS resources.
 - [ ] 1.3 Add examples or placeholders only where they support static validation and future composition.
 - [ ] 1.4 Ensure committed files do not contain AWS credentials, account secrets, production values, copied kubeconfigs, state files, or generated provider/module caches.
+- [ ] 1.5 Ensure examples, placeholder values, outputs, tags, and resource naming conventions avoid personal data, customer data, real account IDs, production-only identifiers, and other LGPD-relevant data.
 
 ## 2. Documentation and Guardrails
 
 - [ ] 2.1 Document the AWS IaC directory structure, module conventions, live environment naming, region assumptions, and expected future resource sequencing.
 - [ ] 2.2 Document state/backend assumptions as future work without requiring a real S3/DynamoDB backend for local validation.
 - [ ] 2.3 Document secrets and identity assumptions, including that local validation must not require AWS credentials.
-- [ ] 2.4 Document that this foundation has zero expected AWS cost and require future resource-producing changes to include expected monthly cost impact, cleanup or rollback steps, and explicit review.
-- [ ] 2.5 State prominently that this foundation does not create EKS, RDS, ECR, ALB, production deployment, Atlantis, Terrareg, or automatic apply workflows.
-- [ ] 2.6 Document future remote-state bootstrap requirements, including ownership, locking, encryption, versioning, access control, recovery, state migration, and lock-failure handling.
-- [ ] 2.7 Document rollback expectations for future AWS resource changes, distinguishing code rollback, planned destroy or cleanup, state recovery, and data-preserving remediation where applicable.
-- [ ] 2.8 Document future AWS resource sequencing checkpoints for account or remote-state bootstrap, low-risk initial resources such as ECR, networking, RDS, EKS or ALB, and observability.
-- [ ] 2.9 Add or update an AWS IaC operations runbook covering prerequisites, credential-free validation, common local validation failures, commands that must not be run by default, no-resource verification, rollback or cleanup expectations, and escalation.
+- [ ] 2.4 Document that local AWS profile names are optional placeholders for future account-backed workflows and that profile names, SSO URLs, account IDs, credentials, and personal workstation configuration must not be committed.
+- [ ] 2.5 Document Security/LGPD data-minimization rules for examples, variables, outputs, tags, resource names, documentation, and generated IaC artifacts.
+- [ ] 2.6 Document that OpenTofu/Terragrunt state files, plan files, command logs, generated provider files, and outputs are sensitive artifacts that can expose infrastructure metadata or LGPD-relevant configuration.
+- [ ] 2.7 Document future IAM/OIDC least-privilege requirements, including scoped trust relationships, short-lived credentials, environment-specific roles, no administrator defaults, no wildcard defaults, and no shared personal credentials.
+- [ ] 2.8 Document mandatory baseline tags for future AWS resources, including project, environment, managed-by, ownership, and cost-allocation metadata or documented equivalents, with non-sensitive values only.
+- [ ] 2.9 Document that this foundation has zero expected AWS cost and require future resource-producing changes to include expected monthly cost impact, cleanup or rollback steps, and explicit review.
+- [ ] 2.10 State prominently that this foundation does not create EKS, RDS, ECR, ALB, production deployment, Atlantis, Terrareg, or automatic apply workflows.
+- [ ] 2.11 Document future remote-state bootstrap requirements, including ownership, locking, encryption, versioning, access control, recovery, state migration, lock-failure handling, retention, and disposal expectations for generated IaC artifacts.
+- [ ] 2.12 Document rollback expectations for future AWS resource changes, distinguishing code rollback, planned destroy or cleanup, state recovery, and data-preserving remediation where applicable.
+- [ ] 2.13 Document future AWS resource sequencing checkpoints for account or remote-state bootstrap, low-risk initial resources such as ECR, networking, RDS, EKS or ALB, and observability.
+- [ ] 2.14 Add or update an AWS IaC operations runbook covering prerequisites, credential-free validation, common local validation failures, commands that must not be run by default, no-resource verification, rollback or cleanup expectations, Security/LGPD escalation, and sensitive artifact handling.
 
 ## 3. Validation Workflow
 
@@ -27,7 +33,7 @@
 
 ## 4. OpenSpec and Review
 
-- [ ] 4.1 Add or update the `aws-iac-foundation` spec delta for structure, validation, documentation, secrets, cost, validate/plan/apply separation, dangerous-command guardrails, remote-state future work, rollback expectations, runbook coverage, and no-provisioning guardrails.
+- [ ] 4.1 Add or update the `aws-iac-foundation` spec delta for structure, validation, documentation, secrets, Security/LGPD data minimization, local AWS profiles, least privilege, mandatory tags, sensitive state/plan/log handling, cost, validate/plan/apply separation, dangerous-command guardrails, remote-state future work, rollback expectations, runbook coverage, and no-provisioning guardrails.
 - [ ] 4.2 Run `openspec validate add-opentofu-terragrunt-aws-foundation --strict`.
 - [ ] 4.3 Run repository verification or document why this planning-only change stopped before implementation.
 - [ ] 4.4 Prepare follow-up review notes for Staff, SRE, and Security/LGPD before any future resource-producing AWS change.

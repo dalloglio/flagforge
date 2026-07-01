@@ -13,6 +13,7 @@ The focus is to validate that:
 - local validation does not require an AWS account, personal credentials, remote backend, state bucket, or cloud resources;
 - no script, target, workflow, or document introduces `tofu apply`, `terragrunt apply`, or automatic apply behavior;
 - documentation covers cost, credentials, profiles, state/backend, secrets, and scope limits;
+- documentation covers Security/LGPD data minimization, local AWS profile boundaries, least-privilege future IAM/OIDC, mandatory tags, and sensitive generated IaC artifacts;
 - documentation separates credential-free validation from future account-backed plan and apply workflows;
 - documentation covers dangerous IaC commands, remote-state bootstrap prerequisites, rollback expectations, future AWS resource sequencing, and operations runbook coverage;
 - `npm run verify` remains independent from OpenTofu, Terragrunt, AWS, and cloud access;
@@ -28,6 +29,8 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Confirm that AWS IaC files are not placed under `src/`, `test/`, local Helm chart paths, kind configuration, gateway configuration, or local observability configuration.
 - Confirm that the tree separates OpenTofu modules from Terragrunt live composition, for example `modules/` and `live/<environment>/<region>/`.
 - Confirm that environment names, regions, common tags, inputs, and outputs follow the documented convention.
+- Confirm that mandatory tag conventions include project, environment, managed-by, ownership, and cost-allocation metadata or documented equivalents.
+- Confirm that tag examples use non-sensitive values and do not include personal data, customer data, secrets, real account IDs, or production-only identifiers.
 - Confirm that placeholders or examples are identified as foundation-only and not production-ready.
 
 ### OpenTofu checks
@@ -37,6 +40,7 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Confirm that provider and version constraints are declared in a reviewable way and do not activate a real remote backend.
 - Confirm that no `.tf` file declares managed AWS resources in this change.
 - Confirm that `.tfvars` files, local state, provider caches, and generated lock/cache artifacts are not treated as a source for secret configuration.
+- Confirm that outputs do not expose secrets, credentials, account IDs, personal data, customer data, or other sensitive values.
 
 ### Terragrunt checks
 
@@ -50,16 +54,21 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 
 - Validate HCL parsing and formatting for `.tf`, `.tfvars.example`, `.hcl`, and Terragrunt files included in the change.
 - Search for secret patterns: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AKIA` keys, tokens, kubeconfigs, real account IDs, passwords, state files, and production values.
+- Search for sensitive data patterns in examples, tags, docs, HCL, and outputs, including personal names, email addresses, customer identifiers, real account IDs, production-only identifiers, and non-placeholder profile names.
 - Confirm that examples use obvious placeholders, non-secret values, or names such as `example`, `dev`, and `local`, not personal data.
 - Confirm that `.gitignore` or documentation covers relevant generated caches and artifacts, including `.terraform/`, `.terragrunt-cache/`, `*.tfstate`, and `*.tfstate.backup`.
+- Confirm that state files, plan files, command logs, generated provider files, and outputs are documented as sensitive artifacts that must stay out of source control unless a future reviewed change explicitly permits a safe example artifact.
 
 ### Documentation checks
 
 - Review the AWS foundation documentation for directory structure, module conventions, live environments, regions, tags, and future sequencing.
 - Confirm that cost is handled explicitly: this change should have zero AWS cost, and future changes that add resources must declare expected impact, rollback, or cleanup.
 - Confirm that credentials and profiles are documented as future prerequisites, including AWS profiles, IAM/OIDC, and the absence of credential requirements for local validation.
+- Confirm that local AWS profile names are optional placeholders for future account-backed workflows and are not required by credential-free validation.
+- Confirm that profile names, SSO URLs, account IDs, credentials, and personal workstation configuration are prohibited from committed `.env`, `.tfvars`, backend config, provider files, generated Terragrunt files, and examples.
+- Confirm that future IAM/OIDC guidance requires least-privilege policies, scoped trust relationships, short-lived credentials, environment-specific roles, no administrator defaults, no wildcard defaults, and no shared personal credentials.
 - Confirm that remote state/backend is documented as future work or an explicit prerequisite, without requiring S3/DynamoDB now.
-- Confirm that remote-state bootstrap is documented as a future resource-producing change that must define ownership, locking, encryption, versioning, access control, recovery, state migration, and lock-failure handling.
+- Confirm that remote-state bootstrap is documented as a future resource-producing change that must define ownership, locking, encryption, versioning, access control, recovery, state migration, lock-failure handling, retention, and disposal expectations for generated IaC artifacts.
 - Confirm that rollback expectations distinguish code rollback, planned destroy or cleanup, state recovery, and data-preserving remediation where applicable.
 - Confirm that future AWS resource sequencing checkpoints keep account or remote-state bootstrap, low-risk initial resources such as ECR, networking, RDS, EKS or ALB, and observability reviewable as separate changes.
 - Confirm that an AWS IaC operations runbook or runbook section covers prerequisites, credential-free validation, common local validation failures, commands that must not be run by default, no-resource verification, rollback or cleanup expectations, and escalation.
@@ -87,6 +96,9 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - OpenSpec strict validation for the change passes.
 - Documentation states that this foundation has zero AWS cost and requires cost review for future resource-producing changes.
 - Documentation describes credentials/profiles as future prerequisites and explains that local validation does not require them.
+- Documentation treats state, plans, logs, generated provider files, and outputs as sensitive artifacts.
+- Documentation requires least-privilege IAM/OIDC for future account-backed workflows.
+- Documentation defines mandatory non-sensitive tags for future AWS resources.
 - Documentation separates `validate`, future `plan`, and future `apply` workflows.
 - Documentation includes an AWS IaC operations runbook or runbook section.
 
@@ -98,6 +110,8 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Live environment/region paths exist only as foundation-only composition and do not point to real account IDs.
 - Remote backend documentation does not configure a real bucket, lock table, or credentials.
 - `npm run verify` behavior does not change when `AWS_PROFILE` is absent.
+- Example local AWS profile names are clearly placeholders and do not reveal personal or real account metadata.
+- Tags, outputs, examples, and resource names do not contain LGPD-relevant data.
 - CI on a clean runner does not depend on `.terraform/` or `.terragrunt-cache/`.
 - Secrets review covers examples, docs, HCL, workflows, Makefile targets, and npm scripts.
 - A future `plan` command is not presented as part of credential-free validation.
@@ -110,6 +124,8 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Invalid HCL fails before any provisioning attempt.
 - Presence of account-backed `tofu plan`, `terragrunt plan`, `tofu apply`, `terragrunt apply`, `tofu destroy`, `terragrunt destroy`, `terragrunt run-all apply`, `terragrunt run-all destroy`, `tofu import`, `tofu state rm`, `tofu force-unlock`, `tofu taint`, `--auto-approve`, or equivalent destructive or state-mutating behavior in a default script, CI target, verification target, or current procedure blocks the change.
 - Presence of AWS credentials, tokens, kubeconfigs, state files, or production values blocks the change.
+- Presence of personal data, customer data, real account IDs, production-only identifiers, sensitive outputs, or non-placeholder local profile metadata blocks the change.
+- Missing documentation for least-privilege IAM/OIDC, mandatory tags, sensitive artifact handling, or Security/LGPD data minimization blocks release confidence.
 - Declaration of managed AWS resources blocks the change because it exceeds the foundation-only scope.
 - `npm run verify` failing because an IaC CLI, AWS credential, or remote backend is absent blocks the change.
 - Missing documentation for cost, credentials/profiles, validate/plan/apply separation, dangerous-command guardrails, runbook coverage, remote-state future work, rollback expectations, or no-apply behavior blocks release confidence.
@@ -128,13 +144,15 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 
 - Non-secret placeholders such as `example`, `dev`, `local`, and `us-east-1` if documented as assumptions.
 - Example AWS profile names only when clearly non-secret, such as `flagforge-dev`, and not required for static validation.
-- Example tags and naming conventions that do not expose real accounts, secrets, or production identifiers.
+- Example tags and naming conventions that do not expose real accounts, personal data, customer data, secrets, or production identifiers.
+- Mandatory tag placeholders for project, environment, managed-by, ownership, and cost-allocation metadata or documented equivalents.
 
 ### Disallowed data
 
 - Real AWS access keys, session tokens, account secrets, copied kubeconfigs, or cloud tokens.
 - Committed `.tfstate`, `.tfstate.backup`, `.terraform/`, `.terragrunt-cache/`, or generated provider/module caches.
 - Real account IDs, production resource names, backend bucket names, lock table names, or personal profile names unless intentionally documented as placeholders.
+- Personal data, customer identifiers, email addresses, sensitive output values, generated plan files, command logs containing provider output, or tag values containing secrets or LGPD-relevant data.
 
 ## Automation
 
@@ -147,7 +165,7 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Documented OpenTofu static validation command, expected to avoid backend/cloud access.
 - Documented Terragrunt format command, expected to be equivalent to `terragrunt hclfmt --check` or the supported local equivalent.
 - Documented HCL/static validation command for Terragrunt, only if it can run without AWS credentials.
-- Secret scan or deterministic text search for AWS credentials, state files, generated caches, account-backed plan, apply, destroy, state mutation, import, force-unlock, taint, run-all apply/destroy, and `--auto-approve` commands.
+- Secret scan or deterministic text search for AWS credentials, state files, generated caches, sensitive generated artifacts, personal data patterns, real account IDs, account-backed plan, apply, destroy, state mutation, import, force-unlock, taint, run-all apply/destroy, and `--auto-approve` commands.
 
 ### Expected gates
 
@@ -156,6 +174,7 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Required no-provisioning review gate: inspect scripts, Makefile targets, workflows, and docs for absence of automatic apply/destroy.
 - Required validate/plan/apply separation gate: inspect scripts, Makefile targets, workflows, runbooks, and docs for credential-free validation only, with account-backed plan/apply deferred to later OpenSpec changes.
 - Required secrets review gate: inspect IaC, docs, examples, and workflows for absence of committed secrets and generated state/cache files.
+- Required Security/LGPD gate: inspect IaC, docs, examples, tags, outputs, and workflows for data minimization, least-privilege future IAM/OIDC, local profile boundaries, mandatory tags, and sensitive artifact handling.
 - Required operations documentation gate: inspect AWS IaC documentation or runbook coverage for prerequisites, validation, common failures, no-resource verification, rollback or cleanup expectations, and escalation.
 - Optional local IaC gate: run OpenTofu/Terragrunt format and static validation when CLIs are installed.
 
@@ -172,8 +191,10 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 
 - Static validation does not prove future AWS account bootstrap, IAM/OIDC trust, remote state locking, drift detection, cost controls in AWS Billing, or real provider permissions.
 - The foundation does not prove account-backed plan, apply, rollback, drift remediation, or remote-state recovery procedures.
+- The foundation does not prove the final least-privilege IAM/OIDC policy shape, mandatory tag enforcement, remote-state retention/disposal controls, or automated sensitive-output detection.
 - Without real resources, this plan cannot validate EKS, RDS, ECR, ALB, Route 53, Secrets Manager, network topology, backup, restore, or deployment behavior.
 - Secret scanning by deterministic search can miss unknown secret formats; manual review remains required.
+- Sensitive data scanning by deterministic search can miss LGPD-relevant context; Security/LGPD review remains required before account-backed workflows or real resources.
 - Optional IaC CLI checks depend on developer or CI availability of OpenTofu and Terragrunt, while `npm run verify` intentionally remains independent of those tools.
 - Foundation-only placeholders can drift if later resource-producing changes do not replace or validate them through their own OpenSpec changes.
 
@@ -186,9 +207,10 @@ None.
 - Add a documented `make iac-validate` or npm wrapper only if it remains a thin wrapper over format/static checks and never runs apply.
 - Add a lightweight CI job for IaC format checks once OpenTofu/Terragrunt installation cost is acceptable for the repository.
 - Add a deterministic secret-scan command for IaC paths, docs, and workflows before the first resource-producing AWS change.
+- Add deterministic checks for mandatory tags, sensitive outputs, obvious personal data patterns, and generated state/plan/log artifacts before the first resource-producing AWS change.
 - Add a separate remote-state bootstrap change before any shared state is required.
 - Add a separate account-backed plan workflow change before CI or local docs include plan procedures.
-- Require Staff, SRE, and Security/LGPD review before any future change introduces remote state, IAM/OIDC, real AWS resources, or apply-capable automation.
+- Require Staff, SRE, and Security/LGPD review before any future change introduces remote state, IAM/OIDC, real AWS resources, account-backed plans, sensitive generated artifacts, or apply-capable automation.
 
 ## Recommendation
 
