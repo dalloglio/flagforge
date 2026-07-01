@@ -8,8 +8,10 @@ KIND_API_PORT ?= 3000
 HELM_RELEASE ?= flagforge-api
 HELM_CHART ?= charts/flagforge-api
 HELM_VALUES ?= charts/flagforge-api/values-local.yaml
+AWS_IAC_DIR ?= infra/aws
+AWS_IAC_MODULE_DIR ?= infra/aws/modules/foundation
 
-.PHONY: dev db-up db-test-up db-migrate test test-unit test-postgres build docker-build compose-up observability-up smoke-health smoke-gateway smoke-prometheus smoke-grafana kind-create kind-delete kind-namespace kind-load-image kind-postgres kind-postgres-wait kind-helm-deploy kind-api-port-forward kind-smoke-ready typecheck lint format-check verify openspec-validate
+.PHONY: dev db-up db-test-up db-migrate test test-unit test-postgres build docker-build compose-up observability-up smoke-health smoke-gateway smoke-prometheus smoke-grafana kind-create kind-delete kind-namespace kind-load-image kind-postgres kind-postgres-wait kind-helm-deploy kind-api-port-forward kind-smoke-ready iac-aws-fmt-check iac-aws-validate typecheck lint format-check verify openspec-validate
 
 dev:
 	npm run dev
@@ -76,6 +78,14 @@ kind-api-port-forward:
 
 kind-smoke-ready:
 	curl --fail http://localhost:$(KIND_API_PORT)/readyz
+
+iac-aws-fmt-check:
+	tofu fmt -check -recursive $(AWS_IAC_DIR)/modules
+	terragrunt hclfmt --check --working-dir $(AWS_IAC_DIR)
+
+iac-aws-validate:
+	tofu -chdir=$(AWS_IAC_MODULE_DIR) init -backend=false
+	tofu -chdir=$(AWS_IAC_MODULE_DIR) validate
 
 smoke-prometheus:
 	curl --fail --silent "http://localhost:$${PROMETHEUS_PORT:-9090}/api/v1/query?query=up%7Bjob%3D%22flagforge-api%22%7D" | node -e 'let d = ""; process.stdin.on("data", (c) => d += c).on("end", () => { const body = JSON.parse(d); const isUp = body.status === "success" && body.data?.result?.some((series) => series.value?.[1] === "1"); if (!isUp) { console.error("flagforge-api Prometheus target is not UP"); process.exit(1); } });'
