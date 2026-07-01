@@ -48,11 +48,25 @@ FlagForge SHALL provide local IaC validation commands for the AWS foundation tha
 
 FlagForge SHALL prevent this foundation change from introducing automatic cloud provisioning behavior.
 
+#### Scenario: Validate plan and apply are separate workflow classes
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation and validation commands
+- **THEN** credential-free validation is described as formatting, local HCL checks, OpenTofu validation without backend access where supported, documentation checks, or OpenSpec validation
+- **AND** account-backed `plan` workflows are identified as future work that requires a separate OpenSpec change
+- **AND** `apply` workflows are identified as future work that requires explicit human review and a separate OpenSpec change
+
 #### Scenario: Apply commands are not automatic
 
 - **WHEN** a contributor inspects package scripts, Makefile targets, CI workflows, and IaC documentation added by this change
 - **THEN** no default, CI, or verification command runs `tofu apply`, `terragrunt apply`, or an equivalent provisioning command
 - **AND** any future apply workflow is identified as out of scope for this change
+
+#### Scenario: Dangerous IaC commands are not hidden behind default wrappers
+
+- **WHEN** a contributor inspects package scripts, Makefile targets, CI workflows, runbooks, and IaC documentation added by this change
+- **THEN** no default, CI, or verification command runs `tofu plan`, `terragrunt plan`, `tofu apply`, `terragrunt apply`, `tofu destroy`, `terragrunt destroy`, `terragrunt run-all apply`, `terragrunt run-all destroy`, `tofu import`, `tofu state rm`, `tofu force-unlock`, `tofu taint`, or an equivalent account-backed, destructive, or state-mutating command
+- **AND** no default, CI, or verification command includes `--auto-approve`
+- **AND** documentation presents any future account-backed or state-mutating command as out of scope for this foundation rather than as a current procedure
 
 #### Scenario: CI does not provision AWS resources
 
@@ -79,8 +93,33 @@ FlagForge SHALL document guardrails for future AWS IaC changes before resource-p
 #### Scenario: Cost guardrails are explicit
 
 - **WHEN** a contributor reads the AWS IaC foundation documentation
-- **THEN** it states that future AWS resource changes must document expected cost impact and cleanup or rollback steps
+- **THEN** it states that this foundation has zero expected AWS cost because it does not create cloud resources
+- **AND** it states that future AWS resource changes must document expected cost impact and cleanup or rollback steps
 - **AND** it requires explicit review before adding resources that can incur cloud cost
+
+#### Scenario: Future remote state bootstrap is explicit
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation
+- **THEN** it states that remote state bootstrap is a future resource-producing change
+- **AND** it requires that future remote-state work define ownership, locking, encryption, versioning, access control, recovery, state migration, and lock-failure handling before use
+
+#### Scenario: Rollback expectations are explicit for future resources
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation
+- **THEN** it states that future AWS resource-producing changes must document rollback or cleanup steps before implementation is considered complete
+- **AND** it distinguishes code rollback, planned destroy or cleanup, state recovery, and data-preserving remediation as separate concerns where applicable
+
+#### Scenario: AWS IaC operations runbook exists
+
+- **WHEN** a contributor inspects the repository documentation for this foundation
+- **THEN** an AWS IaC operations runbook or runbook section exists
+- **AND** it documents prerequisites, credential-free validation, common local validation failures, commands that must not be run by default, no-resource verification, rollback or cleanup expectations for future resource-producing changes, and escalation guidance
+
+#### Scenario: Future AWS resource sequencing is documented
+
+- **WHEN** a contributor reads the AWS IaC foundation documentation
+- **THEN** it describes a future sequencing checkpoint for AWS work that keeps account or remote-state bootstrap, low-risk initial resources such as ECR, networking, RDS, EKS or ALB, and observability changes reviewable as separate follow-up changes
+- **AND** it requires Staff, SRE, and Security/LGPD review before remote state, IAM/OIDC, real AWS resources, or apply-capable automation are introduced
 
 #### Scenario: Scope limits are explicit
 

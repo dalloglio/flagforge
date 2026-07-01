@@ -13,10 +13,12 @@ The focus is to validate that:
 - local validation does not require an AWS account, personal credentials, remote backend, state bucket, or cloud resources;
 - no script, target, workflow, or document introduces `tofu apply`, `terragrunt apply`, or automatic apply behavior;
 - documentation covers cost, credentials, profiles, state/backend, secrets, and scope limits;
+- documentation separates credential-free validation from future account-backed plan and apply workflows;
+- documentation covers dangerous IaC commands, remote-state bootstrap prerequisites, rollback expectations, future AWS resource sequencing, and operations runbook coverage;
 - `npm run verify` remains independent from OpenTofu, Terragrunt, AWS, and cloud access;
 - CI can run host-only gates and, if IaC CLIs are installed, static checks without provisioning.
 
-Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 53, Secrets Manager, real IAM/OIDC, real S3/DynamoDB backend, Atlantis, Terrareg, module registry, automatic apply, destroy workflow, and any public API contract change.
+Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 53, Secrets Manager, real IAM/OIDC, real S3/DynamoDB backend, Atlantis, Terrareg, module registry, account-backed plan workflow, automatic apply, destroy workflow, state mutation workflow, and any public API contract change.
 
 ## Test levels
 
@@ -57,6 +59,10 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Confirm that cost is handled explicitly: this change should have zero AWS cost, and future changes that add resources must declare expected impact, rollback, or cleanup.
 - Confirm that credentials and profiles are documented as future prerequisites, including AWS profiles, IAM/OIDC, and the absence of credential requirements for local validation.
 - Confirm that remote state/backend is documented as future work or an explicit prerequisite, without requiring S3/DynamoDB now.
+- Confirm that remote-state bootstrap is documented as a future resource-producing change that must define ownership, locking, encryption, versioning, access control, recovery, state migration, and lock-failure handling.
+- Confirm that rollback expectations distinguish code rollback, planned destroy or cleanup, state recovery, and data-preserving remediation where applicable.
+- Confirm that future AWS resource sequencing checkpoints keep account or remote-state bootstrap, low-risk initial resources such as ECR, networking, RDS, EKS or ALB, and observability reviewable as separate changes.
+- Confirm that an AWS IaC operations runbook or runbook section covers prerequisites, credential-free validation, common local validation failures, commands that must not be run by default, no-resource verification, rollback or cleanup expectations, and escalation.
 - Confirm that the text clearly states that the foundation does not create resources, is not production-ready, and does not enable automatic apply.
 
 ### CI and workflow checks
@@ -66,6 +72,7 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Confirm that required CI gates continue to cover `npm run typecheck`, `npm test`, OpenAPI if applicable, and `openspec validate --all --strict` through `npm run verify`.
 - If CI runs optional IaC checks, confirm that they are format/static-only and fail on invalid format/HCL, not missing AWS account access.
 - Confirm that added Makefile targets or npm scripts are thin wrappers over documented commands and do not hide apply behavior.
+- Confirm that documented validation does not include account-backed `plan`, and that any future `plan` or `apply` workflow is explicitly deferred to a separate OpenSpec change.
 
 ## Cases
 
@@ -80,6 +87,8 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - OpenSpec strict validation for the change passes.
 - Documentation states that this foundation has zero AWS cost and requires cost review for future resource-producing changes.
 - Documentation describes credentials/profiles as future prerequisites and explains that local validation does not require them.
+- Documentation separates `validate`, future `plan`, and future `apply` workflows.
+- Documentation includes an AWS IaC operations runbook or runbook section.
 
 ### Edge cases
 
@@ -91,17 +100,19 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - `npm run verify` behavior does not change when `AWS_PROFILE` is absent.
 - CI on a clean runner does not depend on `.terraform/` or `.terragrunt-cache/`.
 - Secrets review covers examples, docs, HCL, workflows, Makefile targets, and npm scripts.
+- A future `plan` command is not presented as part of credential-free validation.
+- Rollback guidance does not treat `destroy` as the only recovery path for persistent or shared resources.
 
 ### Expected failures
 
 - Invalid OpenTofu formatting fails through `tofu fmt -check -recursive` or the documented equivalent.
 - Invalid Terragrunt formatting fails through `terragrunt hclfmt --check` or the documented equivalent.
 - Invalid HCL fails before any provisioning attempt.
-- Presence of `tofu apply`, `terragrunt apply`, `tofu destroy`, or `terragrunt destroy` in a default script, CI target, or workflow blocks the change.
+- Presence of account-backed `tofu plan`, `terragrunt plan`, `tofu apply`, `terragrunt apply`, `tofu destroy`, `terragrunt destroy`, `terragrunt run-all apply`, `terragrunt run-all destroy`, `tofu import`, `tofu state rm`, `tofu force-unlock`, `tofu taint`, `--auto-approve`, or equivalent destructive or state-mutating behavior in a default script, CI target, verification target, or current procedure blocks the change.
 - Presence of AWS credentials, tokens, kubeconfigs, state files, or production values blocks the change.
 - Declaration of managed AWS resources blocks the change because it exceeds the foundation-only scope.
 - `npm run verify` failing because an IaC CLI, AWS credential, or remote backend is absent blocks the change.
-- Missing documentation for cost, credentials/profiles, or no-apply behavior blocks release confidence.
+- Missing documentation for cost, credentials/profiles, validate/plan/apply separation, dangerous-command guardrails, runbook coverage, remote-state future work, rollback expectations, or no-apply behavior blocks release confidence.
 
 ## Data
 
@@ -136,14 +147,16 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - Documented OpenTofu static validation command, expected to avoid backend/cloud access.
 - Documented Terragrunt format command, expected to be equivalent to `terragrunt hclfmt --check` or the supported local equivalent.
 - Documented HCL/static validation command for Terragrunt, only if it can run without AWS credentials.
-- Secret scan or deterministic text search for AWS credentials, state files, generated caches, and apply/destroy commands.
+- Secret scan or deterministic text search for AWS credentials, state files, generated caches, account-backed plan, apply, destroy, state mutation, import, force-unlock, taint, run-all apply/destroy, and `--auto-approve` commands.
 
 ### Expected gates
 
 - Required local completion gate: `npm run verify`.
 - Required OpenSpec gate: `openspec validate add-opentofu-terragrunt-aws-foundation --strict`.
 - Required no-provisioning review gate: inspect scripts, Makefile targets, workflows, and docs for absence of automatic apply/destroy.
+- Required validate/plan/apply separation gate: inspect scripts, Makefile targets, workflows, runbooks, and docs for credential-free validation only, with account-backed plan/apply deferred to later OpenSpec changes.
 - Required secrets review gate: inspect IaC, docs, examples, and workflows for absence of committed secrets and generated state/cache files.
+- Required operations documentation gate: inspect AWS IaC documentation or runbook coverage for prerequisites, validation, common failures, no-resource verification, rollback or cleanup expectations, and escalation.
 - Optional local IaC gate: run OpenTofu/Terragrunt format and static validation when CLIs are installed.
 
 ### CI criteria
@@ -153,10 +166,12 @@ Out of scope: creating AWS resources, AWS deployment, EKS, RDS, ECR, ALB, Route 
 - If CI installs OpenTofu/Terragrunt for this change, it must run format/static-only checks and must not configure cloud credentials.
 - CI failures should identify repository quality issues, malformed HCL, or formatting drift, not missing AWS access.
 - Any future CI apply workflow must be introduced by a separate OpenSpec change with Staff, SRE, and Security/LGPD review.
+- Any future CI plan workflow must be introduced by a separate OpenSpec change with backend, credential, state, cost, and review requirements documented.
 
 ## Residual risk
 
 - Static validation does not prove future AWS account bootstrap, IAM/OIDC trust, remote state locking, drift detection, cost controls in AWS Billing, or real provider permissions.
+- The foundation does not prove account-backed plan, apply, rollback, drift remediation, or remote-state recovery procedures.
 - Without real resources, this plan cannot validate EKS, RDS, ECR, ALB, Route 53, Secrets Manager, network topology, backup, restore, or deployment behavior.
 - Secret scanning by deterministic search can miss unknown secret formats; manual review remains required.
 - Optional IaC CLI checks depend on developer or CI availability of OpenTofu and Terragrunt, while `npm run verify` intentionally remains independent of those tools.
@@ -171,6 +186,8 @@ None.
 - Add a documented `make iac-validate` or npm wrapper only if it remains a thin wrapper over format/static checks and never runs apply.
 - Add a lightweight CI job for IaC format checks once OpenTofu/Terragrunt installation cost is acceptable for the repository.
 - Add a deterministic secret-scan command for IaC paths, docs, and workflows before the first resource-producing AWS change.
+- Add a separate remote-state bootstrap change before any shared state is required.
+- Add a separate account-backed plan workflow change before CI or local docs include plan procedures.
 - Require Staff, SRE, and Security/LGPD review before any future change introduces remote state, IAM/OIDC, real AWS resources, or apply-capable automation.
 
 ## Recommendation

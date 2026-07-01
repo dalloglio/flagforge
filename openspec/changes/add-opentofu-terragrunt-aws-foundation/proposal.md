@@ -9,6 +9,8 @@ The repository needs an IaC foundation before any real AWS resources are introdu
 - Add the initial OpenTofu and Terragrunt repository structure for future AWS work.
 - Document environment layout, module conventions, state/backend assumptions, cost guardrails, secrets handling, and validation commands.
 - Add static validation entrypoints that do not require AWS credentials and do not provision cloud resources.
+- Keep validation, future planning, and future apply workflows operationally separate so local static checks cannot be confused with account-backed infrastructure changes.
+- Document dangerous-command guardrails, future remote-state prerequisites, rollback expectations, and an operations runbook for the AWS IaC foundation.
 - Add placeholder or foundation-only module/environment files only where they support validation and future composition.
 - Keep EKS, RDS, ECR, ALB, production deployment, Atlantis, Terrareg, and automatic apply workflows out of scope.
 
