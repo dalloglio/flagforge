@@ -38,7 +38,7 @@ Level 1 local platform work will simulate operational delivery locally before cl
 - PostgreSQL in the local platform.
 - OpenTelemetry, Prometheus, and Grafana for observability.
 
-Level 3 AWS work is a future target architecture, not current implementation.
+Level 3 AWS work is a future target architecture, not current runtime implementation. The repository has an `infra/aws/` OpenTofu/Terragrunt foundation for future AWS work, but it is documentation and static-validation scaffolding only and does not create cloud resources.
 
 ## Guardrails
 
@@ -46,3 +46,4 @@ Level 3 AWS work is a future target architecture, not current implementation.
 - Do not alter API contracts without specs and tests.
 - Do not introduce additional persistence or platform behavior before an active change requests it.
 - Keep `src/` and `test/` untouched for documentation-only workflow foundation changes.
+- Keep AWS IaC validation separate from account-backed `plan`, `apply`, `destroy`, import, state mutation, remote state, and credentialed cloud access until a future OpenSpec change introduces those workflows.
