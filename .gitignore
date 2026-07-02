@@ -5,7 +5,6 @@ node_modules/
 # OpenTofu/Terragrunt generated and sensitive artifacts.
 **/.terraform/
 **/.terragrunt-cache/
-**/.terraform.lock.hcl
 **/*.tfstate
 **/*.tfstate.*
 **/*.tfplan
