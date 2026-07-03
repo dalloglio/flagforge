@@ -2,11 +2,11 @@
 
 ## Service
 
-AWS IaC foundation for future FlagForge Level 3 OpenTofu and Terragrunt work.
+AWS IaC foundation for future FlagForge Level 3 OpenTofu and Terragrunt work, including the static RDS PostgreSQL contract target.
 
 ## Purpose
 
-This runbook describes how to validate the foundation safely, diagnose local static-check failures, verify that no AWS resources are created, and prepare future resource-producing changes for review.
+This runbook describes how to validate the foundation safely, diagnose local static-check failures, verify that default workflows do not provision AWS resources, and prepare future resource-producing changes for review.
 
 ## Preconditions
 
@@ -28,6 +28,8 @@ make iac-aws-validate
 ```
 
 These commands are expected to use local files only. Missing `tofu` or `terragrunt` means the workstation is missing a local prerequisite. It is not a reason to add AWS credentials.
+
+The RDS PostgreSQL module validation may initialize the public AWS provider plugin with `-backend=false`. That is still static validation and must not be expanded into account-backed plan or apply behavior.
 
 ### Common Local Failures
 
@@ -57,17 +59,19 @@ Do not run these as part of this foundation:
 
 Future account-backed `plan` and `apply` workflows require separate OpenSpec changes, explicit review, and Staff, SRE, and Security/LGPD review.
 
-### No-Resource Verification
+### Default No-Provisioning Verification
 
-For this foundation, no-resource verification is source inspection:
+For this foundation, default no-provisioning verification is source inspection:
 
 - confirm `infra/aws/modules/foundation/` contains no `resource` blocks;
+- confirm `infra/aws/modules/rds-postgresql/` only defines the RDS contract and does not create VPC, subnet, route table, NAT gateway, internet gateway, or security-group resources;
+- confirm `infra/aws/live/dev/us-east-1/rds-postgresql/` uses only static-validation mock network values and documents them as invalid for real plan or apply;
 - confirm `package.json`, `Makefile`, and CI workflows do not invoke account-backed or state-mutating IaC commands;
 - confirm no state files, plan files, generated provider files, `.terraform/`, `.terragrunt-cache/`, `.tfvars`, credentials, account IDs, SSO URLs, or production values are committed.
 
 ## Alerts
 
-There are no runtime alerts for this foundation because it creates no AWS resources and has zero expected AWS cost.
+There are no runtime alerts for default repository workflows because they do not provision AWS resources and have zero expected AWS cost.
 
 Escalate immediately if a review finds committed credentials, personal data, customer data, real account IDs, production-only identifiers, generated state, plan artifacts, provider caches, or command logs with sensitive infrastructure metadata.
 
@@ -82,9 +86,9 @@ Successful validation means:
 
 ## Rollback and Cleanup
 
-Rollback for this foundation is code rollback only because no cloud resources exist.
+Rollback for unprovisioned foundation changes is code rollback only.
 
-Future AWS resource-producing changes must document rollback before implementation is considered complete. The rollback plan must distinguish code rollback, planned destroy or cleanup, state recovery, and data-preserving remediation where applicable.
+If a future reviewed workflow provisions RDS resources, code rollback alone does not remove the database, recover state, or preserve data. Use the dedicated RDS runbook at `docs/runbooks/aws-rds-postgresql.md` to distinguish code rollback, planned resource cleanup, state recovery, and data-preserving remediation.
 
 ## Escalation
 
