@@ -20,6 +20,11 @@ database contract.
 - Preserve compatibility with the existing local PostgreSQL application
   contract.
 - Keep application feature behavior unchanged.
+- Keep RDS networking as an explicit dependency on future AWS networking outputs;
+  do not create VPC, subnet, route table, NAT gateway, internet gateway, or
+  security-group resources in this change.
+- Establish a safe first credential contract using an RDS-managed master password
+  or equivalent generated secret reference, without committed password values.
 - Document configuration, migration, cost, security, LGPD, and operational
   expectations before implementation.
 - Provide a clear handoff surface for future AWS deployment work that needs
@@ -36,6 +41,8 @@ database contract.
 - Multi-region or cross-region database design.
 - Database read replicas.
 - Production data migration.
+- VPC, subnet, route table, NAT gateway, internet gateway, security-group,
+  IAM/OIDC, account bootstrap, or remote-state bootstrap resources.
 - Backup restore drills beyond documenting expectations.
 - Automatic CI provisioning or destructive cloud operations.
 - Authentication, authorization, tenancy, environments, SDKs, or segment
@@ -65,6 +72,13 @@ database contract.
   must not be embedded in `src/` application runtime code.
 - Reusable module code and environment composition must remain separated in the
   AWS IaC structure.
+- The first `dev` live composition must be documented as a static contract target
+  and not as account-backed plan/apply-ready until future networking, account,
+  and remote-state changes provide real dependencies.
+- The RDS module must not create VPCs, subnets, route tables, NAT gateways,
+  internet gateways, or security groups; network dependencies must be modeled as
+  inputs, future output references, or clearly marked non-sensitive mock outputs
+  for static validation only.
 - The RDS target must use PostgreSQL and remain compatible with the current
   FlagForge database contract, including schema expectations, connection
   configuration, and migration execution model.
@@ -78,6 +92,9 @@ database contract.
   references, such as endpoint, port, database name, username reference, password
   reference, and security group or network dependency outputs, without
   committing real values or secrets.
+- The first credential pattern must use an RDS-managed master password or
+  equivalent generated secret reference; no database password value may be
+  committed, output in plaintext, or required through real `.tfvars` examples.
 - The RDS target must not use publicly committed credentials, copied cloud
   tokens, account IDs, profile-specific values, production-only identifiers, or
   personal data in examples.
@@ -111,6 +128,10 @@ database contract.
 
 - RDS networking or secret assumptions can leak into application code if the
   database contract is not kept environment-neutral.
+- A database module can accidentally create networking scope if VPC, subnet, and
+  security-group ownership is not explicitly excluded.
+- A committed `dev` live composition can be mistaken for plan/apply readiness if
+  mock network references are not clearly marked as static-validation-only.
 - IaC outputs, state, plans, or logs can expose sensitive metadata if handling
   expectations are unclear.
 - Cost can surprise contributors if instance class, storage, backups, retention,
@@ -140,16 +161,18 @@ database contract.
   resources.
 - Cost visibility and Security/LGPD review are part of the product requirements
   for this change.
+- The first RDS increment must not create AWS networking resources; it consumes
+  network references that future networking and remote-state changes will
+  provide.
+- The first credential contract uses an RDS-managed master password or equivalent
+  generated secret reference rather than a committed or user-supplied password
+  value.
 
 ## Open questions
 
-- What environment name should the first RDS target represent: development,
-  staging-like, or another Level 3 learning environment?
 - Should the first implementation include a real account-backed plan workflow, or
   should it stop at source-controlled IaC and documentation until a separate
   provisioning change?
-- Which AWS secret-management integration should future deployment work consume
-  for database credentials?
 - What minimum backup, deletion protection, and monitoring settings should be
   required for the first cost-conscious RDS target?
 

@@ -13,6 +13,10 @@ operations changes from inventing database assumptions inside unrelated work.
   security/LGPD guardrails, and local-to-AWS database differences.
 - Define database interface outputs or references that future AWS deployment
   changes can consume without committing secrets or real account-specific values.
+- Keep RDS network inputs as dependencies on future networking outputs rather
+  than creating VPC, subnet, or security-group resources in this change.
+- Use an RDS-managed master password reference for the first target so no
+  database password value is modeled as committed configuration.
 - Preserve the existing FlagForge PostgreSQL application contract, including
   schema compatibility and migration expectations.
 - Keep static IaC validation separate from future account-backed plan, apply,
@@ -32,13 +36,17 @@ operations changes from inventing database assumptions inside unrelated work.
 
 ### Modified Capabilities
 
-- None.
+- `aws-iac-foundation`: Clarifies that the foundation sequence has advanced
+  from zero-resource scaffolding to an RDS contract increment, while account,
+  remote-state, networking, plan, apply, and provisioning workflows remain out
+  of scope.
 
 ## Impact
 
 - Affected systems: `infra/aws/` OpenTofu/Terragrunt structure, AWS IaC
   documentation, runbooks, validation wrappers where appropriate, OpenSpec
-  requirements, and future AWS deployment sequencing.
+  requirements, accepted AWS foundation scope documentation, and future AWS
+  deployment sequencing.
 - Affected existing capabilities: no public API, domain, flag evaluation,
   audit-log, local PostgreSQL persistence behavior, local kind, Helm, Kong,
   Argo CD, or observability behavior changes are expected.

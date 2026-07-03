@@ -19,6 +19,9 @@ the selected OpenTofu and Terragrunt IaC workflow.
   environment composition
 - **AND** the live composition identifies the first target as a non-production
   AWS learning environment
+- **AND** the live composition is documented as a static contract target rather
+  than an account-backed plan or apply target until future networking, account,
+  and remote-state changes provide real dependencies
 
 #### Scenario: RDS uses PostgreSQL engine
 
@@ -26,6 +29,18 @@ the selected OpenTofu and Terragrunt IaC workflow.
 - **THEN** the managed database target uses the PostgreSQL engine
 - **AND** the database name and engine configuration are documented without
   committing real account-specific values or secrets
+
+#### Scenario: RDS consumes external network references
+
+- **WHEN** a contributor inspects the RDS PostgreSQL module and live
+  composition
+- **THEN** VPC, subnet, route table, NAT gateway, internet gateway, and security
+  group resources are not created by this change
+- **AND** required network dependencies are represented as inputs, references,
+  documented future outputs, or clearly marked non-sensitive mock outputs for
+  static validation only
+- **AND** any mock network outputs are documented as invalid for real
+  account-backed plan or apply workflows
 
 ### Requirement: Preserve the application PostgreSQL contract
 
@@ -68,6 +83,18 @@ deployment work can consume without redefining the database contract.
   future deployment work
 - **AND** it avoids committing real credential values, generated secrets, or
   personal workstation configuration
+
+#### Scenario: RDS master credential uses managed password reference
+
+- **WHEN** a contributor inspects the RDS PostgreSQL module, live composition,
+  documentation, variables, and outputs
+- **THEN** the first target uses an RDS-managed master password or equivalent
+  generated secret reference
+- **AND** no database password value is accepted as committed example
+  configuration, output in plaintext, or required in a real `.tfvars` file
+- **AND** any managed secret ARN or equivalent reference exposed for future
+  deployment work is treated as a sensitive output or sensitive generated
+  artifact
 
 #### Scenario: Secret values are not committed
 

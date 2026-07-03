@@ -21,6 +21,11 @@ changes that will need database references without redefining persistence.
   Terragrunt AWS structure.
 - Keep reusable module code separate from environment composition.
 - Represent the first target as a non-production `dev` learning environment.
+- Keep RDS dependent on externally supplied network references and avoid
+  creating VPCs, subnets, route tables, NAT gateways, or security groups.
+- Make the committed `dev` composition a static contract target, not an
+  account-backed plan or apply target until future networking, account, and
+  remote-state changes provide real dependencies.
 - Preserve compatibility with the existing FlagForge PostgreSQL schema,
   connection, and migration model.
 - Document local-to-AWS configuration differences, secret handling, network
@@ -36,6 +41,8 @@ changes that will need database references without redefining persistence.
 - Public API, domain, flag evaluation, audit-log, or application feature
   changes.
 - Multi-region design, read replicas, or production high availability.
+- VPC, subnet, route table, NAT gateway, security-group, EKS, ALB, IAM/OIDC, or
+  remote-state bootstrap resources.
 - Automatic CI provisioning or default account-backed IaC commands.
 - Remote state bootstrap, IAM/OIDC automation, or secret-management
   implementation beyond documented references.
@@ -67,6 +74,26 @@ IaC workflow. Another alternative is to add production-like multi-environment
 composition immediately, but that raises cost and review complexity before AWS
 deployment work exists.
 
+### Treat networking as an explicit dependency, not part of the RDS module
+
+The RDS module should require network references as inputs, such as private
+subnet IDs or a future database subnet-group reference and database security
+group IDs. It may define RDS-specific attachment objects only when they are
+derived from those inputs, but it must not create VPCs, subnets, route tables,
+internet gateways, NAT gateways, or security groups.
+
+The `dev` Terragrunt composition should document and wire the shape of those
+dependencies without becoming an account-backed target. If placeholder or mock
+dependency outputs are needed for static validation, they must be clearly named
+as non-sensitive examples and documented as invalid for real plan or apply.
+Future AWS networking and remote-state changes are responsible for providing
+real network outputs.
+
+Alternative considered: include a minimal VPC and security group with RDS. That
+would make the first database increment appear more complete, but it would also
+collapse networking, cost, security, and database review into one change and
+contradict the current sequencing guardrails.
+
 ### Keep application configuration environment-neutral
 
 The RDS target should expose or document non-secret references such as endpoint,
@@ -78,6 +105,24 @@ responsible for materializing the final `DATABASE_URL` or equivalent secret.
 Alternative considered: change application configuration now for AWS-specific
 inputs. That would couple runtime code to a platform target before workload
 deployment exists.
+
+### Use RDS-managed master password references for the first target
+
+The first RDS target should use the AWS RDS managed master password capability
+where supported, so the module models a username and a generated secret
+reference without accepting or committing a database password value. The module
+handoff may expose the managed secret ARN or equivalent reference as a sensitive
+output for future deployment work, but it must not output the password itself.
+
+Future workload deployment remains responsible for deciding whether the
+application uses that managed master secret directly, derives an application
+database user, or integrates with a separate secret-management workflow. This
+change only establishes the safe credential reference contract.
+
+Alternative considered: require a sensitive password input. That is compatible
+with OpenTofu, but it would invite `.tfvars`, local shell history, state, and
+plan-handling problems before this project has account, remote-state, and secret
+management workflows.
 
 ### Treat credentials and generated IaC artifacts as sensitive
 
@@ -116,11 +161,12 @@ restore, and operational ownership changes.
 ## Risks / Trade-offs
 
 - RDS module design may get ahead of networking foundations -> Keep network
-  dependencies explicit as inputs or references and avoid inventing full VPC/EKS
-  scope in this change.
+  dependencies explicit as inputs or references, avoid inventing VPC or security
+  group scope, and mark live `dev` wiring as non-provisionable until future
+  networking outputs exist.
 - Outputs can leak sensitive infrastructure metadata -> Mark sensitive outputs
-  appropriately and document that state, plans, logs, and outputs are sensitive
-  generated artifacts.
+  appropriately, especially the managed master secret reference, and document
+  that state, plans, logs, and outputs are sensitive generated artifacts.
 - Cost can become non-obvious -> Require expected cost drivers and cleanup or
   rollback documentation before implementation is considered complete.
 - Static validation may not prove cloud compatibility -> Treat static validation
@@ -135,15 +181,16 @@ restore, and operational ownership changes.
 ## Migration Plan
 
 1. Add the RDS PostgreSQL OpenTofu module and Terragrunt live composition for
-   the first `dev` target.
+   the first static-contract `dev` target.
 2. Document configuration, secret references, network assumptions, cost
    assumptions, validation commands, and cleanup or rollback expectations.
 3. Run OpenSpec validation and repository verification that do not require AWS
    credentials or live cloud resources.
 4. Optionally run IaC formatting or static validation when local OpenTofu and
    Terragrunt CLIs are installed, still without default provisioning.
-5. Defer account-backed plan, apply, remote state, and deployment consumption to
-   explicit reviewed workflows or follow-up changes.
+5. Defer account-backed plan, apply, remote state, real networking dependencies,
+   and deployment consumption to explicit reviewed workflows or follow-up
+   changes.
 
 Rollback for repository changes is code rollback. If a future human-reviewed
 apply creates RDS resources, cleanup must follow the documented resource cleanup
@@ -151,8 +198,6 @@ or data-preserving remediation path rather than relying on code rollback alone.
 
 ## Open Questions
 
-- Which AWS secret-management service should own the future database password
-  reference consumed by workload deployment?
 - Should a later change introduce account-backed plan validation before any
   apply-capable workflow?
 - What exact minimum backup retention, deletion protection, and monitoring
