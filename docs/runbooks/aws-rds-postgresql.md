@@ -73,7 +73,9 @@ Current contract assumptions:
 
 - encrypted storage is enabled;
 - backup retention is seven days;
-- final snapshot is enabled by default for future reviewed deletion workflows;
+- final snapshot is enabled by default for future reviewed deletion workflows,
+  using either the module-generated unique identifier or an explicit
+  cleanup-time identifier;
 - deletion protection is disabled for the non-production learning target;
 - maintenance runs in a documented UTC window;
 - PostgreSQL and upgrade logs are exported;
@@ -88,6 +90,10 @@ For future live resources, choose the correct path:
 
 - Code rollback: revert module, Terragrunt, or documentation changes when no resources were applied.
 - Planned resource cleanup: use a reviewed destroy or cleanup workflow only after data retention, final snapshot, and access impacts are approved.
+- Final snapshot naming: before reviewed cleanup, confirm the configured final
+  snapshot identifier is unique among retained snapshots in the target account;
+  use the generated default or set `final_snapshot_identifier` explicitly for
+  the cleanup workflow.
 - State recovery: restore or repair OpenTofu/Terragrunt state through a reviewed state procedure, never through ad hoc state mutation.
 - Data-preserving remediation: keep the database, snapshot it if needed, fix configuration or access separately, and avoid destructive cleanup.
 

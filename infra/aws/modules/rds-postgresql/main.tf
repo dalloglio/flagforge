@@ -1,6 +1,19 @@
 locals {
-  subnet_group_name         = coalesce(var.db_subnet_group_name, "${var.identifier}-subnet-group")
-  final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.identifier}-final-snapshot"
+  subnet_group_name = coalesce(var.db_subnet_group_name, "${var.identifier}-subnet-group")
+  final_snapshot_identifier = (
+    var.skip_final_snapshot ? null :
+    var.final_snapshot_identifier != null ? var.final_snapshot_identifier :
+    "${var.identifier}-final-${random_id.final_snapshot[0].hex}"
+  )
+}
+
+resource "random_id" "final_snapshot" {
+  count       = var.skip_final_snapshot || var.final_snapshot_identifier != null ? 0 : 1
+  byte_length = 4
+
+  keepers = {
+    db_instance_identifier = var.identifier
+  }
 }
 
 resource "aws_db_subnet_group" "this" {

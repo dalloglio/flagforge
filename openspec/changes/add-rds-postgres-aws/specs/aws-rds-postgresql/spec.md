@@ -161,6 +161,9 @@ rollback expectations for the AWS RDS PostgreSQL target.
 - **THEN** backup retention, encryption, deletion protection, maintenance window,
   parameter group, monitoring, and logging expectations are documented or
   explicitly deferred with rationale
+- **AND** final snapshot naming avoids reusing a fixed identifier across
+  repeated reviewed cleanup workflows, either by generating a unique identifier
+  per DB instance lifecycle or by requiring an explicit cleanup-time identifier
 
 #### Scenario: Rollback and cleanup are documented
 

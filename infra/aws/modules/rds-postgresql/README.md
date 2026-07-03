@@ -22,6 +22,18 @@ Future deployment work may consume the managed secret reference directly, derive
 an application database user, or integrate with a separate secrets workflow. That
 decision is intentionally outside this module.
 
+## Final Snapshot
+
+Final snapshots are enabled by default. When `skip_final_snapshot` is `false`
+and no explicit `final_snapshot_identifier` is supplied, the module derives a
+non-secret identifier from the DB identifier plus a generated suffix that is
+stable for the current DB instance lifecycle. This avoids reusing a fixed final
+snapshot name across repeated reviewed cleanup workflows.
+
+Reviewed cleanup workflows may set `final_snapshot_identifier` explicitly when
+operators need a pre-approved name. Keep that value non-sensitive and unique
+among retained RDS snapshots in the target account.
+
 ## Network Contract
 
 Network dependencies are required inputs:

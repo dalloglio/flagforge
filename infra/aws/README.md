@@ -133,7 +133,7 @@ RDS operational defaults in this contract:
 
 - storage encryption enabled, using the AWS-managed key unless a future change supplies a KMS key;
 - seven-day backup retention;
-- final snapshot enabled by default when a resource is deleted through a future reviewed workflow;
+- final snapshot enabled by default when a resource is deleted through a future reviewed workflow, with a generated unique snapshot identifier unless an explicit cleanup-time identifier is supplied;
 - deletion protection disabled for the non-production learning target, with future production-like changes expected to revisit it;
 - auto minor version upgrades enabled during the maintenance window;
 - no custom parameter group yet; PostgreSQL parameter tuning is deferred until workload evidence exists;

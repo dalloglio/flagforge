@@ -121,6 +121,12 @@ variable "skip_final_snapshot" {
   default     = false
 }
 
+variable "final_snapshot_identifier" {
+  description = "Optional explicit final snapshot identifier for reviewed cleanup workflows. Null derives a per-instance unique non-secret identifier."
+  type        = string
+  default     = null
+}
+
 variable "enabled_cloudwatch_logs_exports" {
   description = "PostgreSQL log types exported to CloudWatch Logs."
   type        = list(string)
