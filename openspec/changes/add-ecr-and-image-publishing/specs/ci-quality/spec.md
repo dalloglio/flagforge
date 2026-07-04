@@ -24,3 +24,8 @@ The CI workflow SHALL verify the application build and Docker image build in add
 - **WHEN** repository workflows include image publishing behavior
 - **THEN** publish-capable behavior is isolated from the normal pull request quality workflow
 - **AND** publish-capable events, permissions, environment, and AWS identity assumptions are explicit in the publishing workflow
+
+#### Scenario: Automatic publishing is activation-gated
+- **WHEN** repository workflows include image publishing behavior before AWS prerequisites are provisioned and reviewed
+- **THEN** automatic `main` branch runs do not attempt ECR authentication or ECR push unless an explicit activation setting such as `ECR_PUBLISHING_ENABLED=true` is configured
+- **AND** pull request validation remains unaffected by the activation setting

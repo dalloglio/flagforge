@@ -12,10 +12,11 @@ Stakeholders are contributors preparing Level 3 AWS delivery increments, Staff r
 
 - Define AWS ECR as the registry target for FlagForge API images.
 - Document the image URI shape `<aws-account-id>.dkr.ecr.us-east-1.amazonaws.com/flagforge-api:<tag>` using placeholder account values.
-- Publish from trusted GitHub Actions events only: protected `main` branch pushes and manual `workflow_dispatch` runs.
+- Define publish-capable trusted GitHub Actions events only: protected `main` branch pushes and manual `workflow_dispatch` runs.
+- Keep the publish job disabled by default behind an explicit repository or environment variable such as `ECR_PUBLISHING_ENABLED=true` until the future account-backed ECR/IAM prerequisite change provisions AWS resources and the required review gates accept activation.
 - Use short-lived GitHub Actions OIDC credentials with a scoped AWS role named `flagforge-github-actions-ecr-publisher-dev` and GitHub environment `aws-dev`.
 - Tag published images with a date plus short commit SHA, such as `20260704.abcd123`, and retain commit-addressable provenance.
-- Block publishing when high or critical image vulnerability findings are present.
+- Block publishing before ECR push when Trivy image scanning finds high or critical vulnerabilities.
 - Document retention, cleanup, rollback, cost, sensitive-data, and future deployment handoff expectations.
 
 **Non-Goals:**
@@ -25,12 +26,13 @@ Stakeholders are contributors preparing Level 3 AWS delivery increments, Staff r
 - Deploying to EKS, ALB, ingress, DNS, TLS, or production traffic paths.
 - Introducing Helm chart behavior changes, Argo CD production sync, or runtime application behavior changes.
 - Requiring AWS credentials, Docker, ECR access, or live cloud resources from `npm run verify`.
+- Enabling automatic `main` branch image publishing before ECR, lifecycle policy, IAM/OIDC, branch protection, and GitHub environment protection prerequisites are provisioned and reviewed.
 
 ## Decisions
 
 1. Use a dedicated publish workflow instead of extending the existing CI job to push images.
 
-   Rationale: pull request validation must remain safe for untrusted code and must continue to build the image without publishing. A separate workflow makes publish-capable events, permissions, environment protections, and AWS role assumptions easier to review.
+   Rationale: pull request validation must remain safe for untrusted code and must continue to build the image without publishing. A separate workflow makes publish-capable events, permissions, environment protections, and AWS role assumptions easier to review. The publish job must include an explicit activation guard, defaulting to disabled when `ECR_PUBLISHING_ENABLED` is unset or not `true`, so `main` pushes do not fail repeatedly before AWS prerequisites exist.
 
    Alternatives considered: adding conditional publish steps to `.github/workflows/ci.yml`. This was rejected because it mixes quality validation with cloud publication and makes event gating harder to audit.
 
@@ -52,13 +54,19 @@ Stakeholders are contributors preparing Level 3 AWS delivery increments, Staff r
 
    Alternatives considered: semantic version tags only. This remains future-compatible but is not required for the first registry publishing increment.
 
-5. Gate publish completion on high and critical vulnerability findings.
+5. Gate ECR push on high and critical vulnerability findings with Trivy.
 
-   Rationale: publishing should not create a deployable image reference when severe image findings are already visible. The workflow should build the image, authenticate to ECR, push or prepare for scan according to the selected scanner behavior, and fail before accepting the publish result when high or critical findings are present.
+   Rationale: publishing should not create a deployable image reference when severe image findings are already visible. The workflow should build the local Docker image, run Trivy against that image with high and critical severities configured as failures, and only authenticate to ECR and push after the scan passes. This keeps the first gate deterministic and avoids accepting a vulnerable image as a deployable registry reference.
 
    Alternatives considered: warning-only scan output. This was rejected for the first publish workflow because it creates unresolved release risk without a clear review owner.
 
-6. Keep local verification host-only and unchanged.
+6. Treat branch protection and GitHub environment protection as activation prerequisites.
+
+   Rationale: workflow YAML can limit events and permissions, but protected `main` and the `aws-dev` environment protections are repository settings. Implementation must document and validate the expected settings before publish activation is accepted.
+
+   Alternatives considered: relying only on YAML event filters. This was rejected because repository settings are part of the trust boundary for CI-to-AWS publishing.
+
+7. Keep local verification host-only and unchanged.
 
    Rationale: `npm run verify` is the repository completion gate for code quality and OpenSpec validation. Registry publishing depends on account configuration and must remain outside that host-only gate.
 
@@ -67,8 +75,9 @@ Stakeholders are contributors preparing Level 3 AWS delivery increments, Staff r
 ## Risks / Trade-offs
 
 - Untrusted pull request code could publish an image if event filters or permissions are too broad -> use a dedicated workflow with trusted events only, environment protection, explicit permissions, and no publish credentials in pull request jobs.
-- ECR or IAM prerequisites may not exist when the workflow is introduced -> document placeholder configuration and fail clearly until the future account-backed prerequisite change provisions the repository and role.
-- Vulnerability scanning behavior may vary by scanner timing or AWS configuration -> document the selected gate and require Security/LGPD review before accepting publish capability.
+- ECR or IAM prerequisites may not exist when the workflow is introduced -> keep the publish job activation guard disabled by default and document that automatic publishing cannot be enabled until the future account-backed prerequisite change provisions the repository and role.
+- GitHub repository protection settings may drift from the documented trust boundary -> document the expected `main` branch protection and `aws-dev` environment protection, and validate them before publish activation is accepted.
+- Vulnerability scanner behavior may vary by database freshness or action version -> use Trivy image scanning before ECR push, pin the action to an explicit major version, fail on high and critical findings, and require Security/LGPD review before accepting publish capability.
 - Date plus SHA tags are not release semantics -> preserve provenance now and leave semantic versioning or release tags for a future release-management change.
 - Retention rules cannot be enforced without ECR repository policy provisioning -> document the expected policy now and require the future ECR IaC change to implement it.
 - Publishing costs can grow if cleanup is not implemented later -> keep retention expectations explicit: keep the last three tagged images and delete older untagged images after seven days.
@@ -76,15 +85,15 @@ Stakeholders are contributors preparing Level 3 AWS delivery increments, Staff r
 
 ## Migration Plan
 
-1. Add a publish workflow and documentation using placeholder account and role values.
+1. Add a publish workflow and documentation using placeholder account and role values, with the publish job disabled unless `ECR_PUBLISHING_ENABLED=true`.
 2. Keep existing CI validation and Docker build behavior intact.
-3. Validate workflow syntax and documentation without requiring live AWS credentials.
-4. In a future OpenSpec change, provision the ECR repository, lifecycle policy, IAM/OIDC role, and any account-backed configuration.
-5. After prerequisites exist, run `workflow_dispatch` from the protected environment to publish a test image and record the resulting image reference.
+3. Validate workflow syntax, Trivy gate configuration, repository-setting documentation, and local documentation without requiring live AWS credentials.
+4. In a future OpenSpec change, provision the ECR repository, lifecycle policy, IAM/OIDC role, branch protection, environment protection, and any account-backed configuration.
+5. After prerequisites exist and required reviews accept activation, set `ECR_PUBLISHING_ENABLED=true`, run `workflow_dispatch` from the protected environment to publish a test image, and record the resulting image reference.
 6. Future EKS, Helm, or Argo CD changes consume the documented immutable image tag or a selected prior known-good image reference.
 
-Rollback for this change is to disable or remove the publish workflow and continue using existing pull request validation. Rollback for future deployments is to select a prior known-good date plus SHA image tag rather than relying on a mutable tag.
+Rollback for this change is to unset `ECR_PUBLISHING_ENABLED`, disable the publish workflow, or remove the publish workflow while continuing to use existing pull request validation. Rollback for future deployments is to select a prior known-good date plus SHA image tag rather than relying on a mutable tag.
 
 ## Open Questions
 
-None for this proposal. Account-specific values, ECR provisioning, IAM/OIDC resource creation, and lifecycle policy enforcement are intentionally deferred to a future OpenSpec change.
+None for this proposal. Account-specific values, ECR provisioning, IAM/OIDC resource creation, branch protection enforcement, environment protection enforcement, lifecycle policy enforcement, and enabling automatic main-branch publishing are intentionally deferred to a future OpenSpec change.

@@ -34,12 +34,18 @@ FlagForge SHALL treat account-backed ECR repository provisioning as a prerequisi
 - **AND** no default command requires remote state, AWS credentials, or live cloud resources
 
 ### Requirement: Publish-capable GitHub Actions workflow
-FlagForge SHALL provide or define a GitHub Actions workflow that publishes the FlagForge API image only from trusted events.
+FlagForge SHALL provide or define a GitHub Actions workflow that can publish the FlagForge API image only from trusted events and only when explicit activation prerequisites are satisfied.
 
 #### Scenario: Publish workflow uses trusted events
 - **WHEN** a contributor inspects the publish-capable workflow
 - **THEN** it is publish-capable only for protected `main` branch pushes and manual `workflow_dispatch` runs
 - **AND** it does not publish images for pull request events
+
+#### Scenario: Publish job is disabled until prerequisites are activated
+- **WHEN** the ECR repository, IAM/OIDC role, branch protection, and GitHub environment protection prerequisites are not yet provisioned and reviewed
+- **THEN** the publish-capable workflow does not attempt ECR authentication or ECR push for automatic `main` branch runs
+- **AND** publish execution requires an explicit activation setting such as `ECR_PUBLISHING_ENABLED=true`
+- **AND** documentation states that enabling the activation setting belongs to a future account-backed prerequisite change
 
 #### Scenario: Publish workflow uses canonical build behavior
 - **WHEN** the publish-capable workflow builds the FlagForge API image
@@ -69,6 +75,11 @@ FlagForge SHALL use short-lived GitHub-to-AWS identity for image publishing.
 - **THEN** it scopes permissions to the minimum ECR actions needed to authenticate, upload image layers, push manifests, and read vulnerability findings for `flagforge-api`
 - **AND** it does not present administrator policies, broad principals, wildcard resource access, or long-lived credentials as defaults
 
+#### Scenario: Repository protection assumptions are documented
+- **WHEN** a contributor reads the image publishing documentation
+- **THEN** it identifies protected `main` branch pushes and the `aws-dev` GitHub environment as part of the publishing trust boundary
+- **AND** it states that branch protection and environment protection must be validated before enabling ECR publishing
+
 ### Requirement: Image tagging and provenance
 FlagForge SHALL publish images with reviewable and commit-addressable tags.
 
@@ -87,12 +98,18 @@ FlagForge SHALL publish images with reviewable and commit-addressable tags.
 - **THEN** they avoid secrets, tokens, personal data, customer data, real account IDs, and production-only identifiers
 
 ### Requirement: Image vulnerability gate
-FlagForge SHALL define image vulnerability visibility and publish blocking expectations for high and critical findings.
+FlagForge SHALL define image vulnerability visibility and publish blocking expectations for high and critical findings before images are pushed to ECR.
 
 #### Scenario: Publish blocks high and critical findings
 - **WHEN** the publish-capable workflow evaluates image vulnerability findings
-- **THEN** publishing is not accepted when high or critical findings are present
+- **THEN** it runs Trivy against the locally built image before ECR login and push
+- **AND** publishing is not accepted when high or critical findings are present
 - **AND** the workflow fails with enough context for reviewers to identify the failing image security gate without exposing secrets
+
+#### Scenario: Scanner behavior is explicit
+- **WHEN** a contributor inspects the publish-capable workflow
+- **THEN** the image scanner, severity threshold, and failure behavior are explicit in workflow configuration
+- **AND** the workflow does not rely on asynchronous ECR scan completion as the first high or critical vulnerability gate
 
 #### Scenario: Security review gate is documented
 - **WHEN** a contributor reads the image publishing documentation
