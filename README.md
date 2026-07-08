@@ -158,6 +158,12 @@ curl --fail -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:3000/flags
 
 The app container uses `DATABASE_URL=postgres://flagforge:flagforge@postgres:5432/flagforge` inside the Compose network and exposes the API on port `3000` by default. Override the API host port with `PORT`. Compose also honors `DATABASE_PORT` and `TEST_DATABASE_PORT` for the runtime and test PostgreSQL host ports. Migrations are intentionally not run by the app container startup command.
 
+## ECR Image Publishing
+
+The publish-capable GitHub Actions workflow is `.github/workflows/publish-ecr-image.yml`. It targets AWS ECR repository `flagforge-api` in `us-east-1` for the future `dev` AWS environment and uses `<yyyymmdd>.<short-sha>` tags such as `20260704.abcd123`.
+
+Publishing is disabled unless `ECR_PUBLISHING_ENABLED=true` is configured after the future AWS prerequisite change provisions ECR, lifecycle policy, OIDC role `flagforge-github-actions-ecr-publisher-dev`, protected `main`, and the `aws-dev` GitHub environment. The workflow runs Trivy before ECR login or push and fails on high or critical findings. Full activation, retention, rollback, and review expectations are documented in `docs/runbooks/ecr-image-publishing.md`.
+
 Run the local Kong gateway through Docker Compose after the app service is available:
 
 ```bash
