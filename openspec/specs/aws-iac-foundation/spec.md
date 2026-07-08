@@ -6,7 +6,7 @@ Define the source-controlled AWS IaC foundation, local validation boundaries, an
 
 ### Requirement: AWS IaC foundation structure
 
-FlagForge SHALL provide a source-controlled OpenTofu and Terragrunt foundation for future Level 3 AWS infrastructure work.
+FlagForge SHALL provide a source-controlled OpenTofu and Terragrunt foundation for Level 3 AWS infrastructure work.
 
 #### Scenario: AWS IaC files live outside application source
 
@@ -23,9 +23,10 @@ FlagForge SHALL provide a source-controlled OpenTofu and Terragrunt foundation f
 #### Scenario: Foundation distinguishes scaffold and resource contract modules
 
 - **WHEN** this change is implemented
-- **THEN** the foundation documentation distinguishes the original foundation-only validation module from the RDS PostgreSQL resource contract introduced by this change
+- **THEN** the foundation documentation distinguishes the original foundation-only validation module from the RDS PostgreSQL resource contract and the EKS and ALB runtime contract introduced by reviewed changes
 - **AND** the RDS PostgreSQL module is described as a static, reviewable infrastructure contract that still does not authorize default account-backed plan, apply, destroy, import, or state-mutating workflows
-- **AND** EKS, ECR, ALB, production deployment, Atlantis, Terrareg, remote state, IAM/OIDC automation, networking resources, and automatic apply workflows remain out of scope unless a future OpenSpec change introduces them
+- **AND** the EKS and ALB modules are described as static, reviewable runtime infrastructure contracts that still do not authorize production deployment, default account-backed plan, apply, destroy, import, state-mutating workflows, kubeconfig generation, cluster-admin access, or live-cluster workflows
+- **AND** ECR repository provisioning, production deployment, Atlantis, Terrareg, remote state, IAM/OIDC automation, networking resources, and automatic apply workflows remain out of scope unless a future OpenSpec change introduces them
 
 ### Requirement: Credential-free static validation
 
