@@ -27,7 +27,7 @@ terraform {
 
 inputs = {
   cluster_name       = "flagforge-dev"
-  kubernetes_version = "1.30"
+  kubernetes_version = "1.34"
 
   cluster_role_arn = local.static_validation_only_dependencies.cluster_role_arn
   node_role_arn    = local.static_validation_only_dependencies.node_role_arn

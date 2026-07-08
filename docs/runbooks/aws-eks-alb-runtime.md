@@ -51,7 +51,7 @@ Before considering this change complete, confirm:
 The EKS contract defines:
 
 - cluster name `flagforge-dev`;
-- Kubernetes version `1.30`;
+- Kubernetes version `1.34`;
 - public and private endpoint access assumptions for the learning target;
 - a development-sized managed node group with one to three `t3.small` nodes and desired size two;
 - baseline add-ons for VPC CNI, CoreDNS, kube-proxy, and EBS CSI;

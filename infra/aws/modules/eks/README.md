@@ -17,7 +17,7 @@ kubeconfigs, namespaces, Helm releases, Argo CD applications, or workloads.
 ## Contract Assumptions
 
 - `cluster_name`: non-sensitive cluster name such as `flagforge-dev`.
-- `kubernetes_version`: defaults to `1.30` for the first learning target.
+- `kubernetes_version`: defaults to `1.34` for the first learning target.
 - endpoint access: public and private endpoint access are represented as inputs;
   the first `dev` composition is learning-focused and not production-ready.
 - node capacity: defaults to a small managed node group of one to three

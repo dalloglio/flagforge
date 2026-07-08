@@ -5,14 +5,17 @@ locals {
     vpc-cni = {
       version = try(local.addon_versions.vpc_cni, null)
     }
-    coredns = {
-      version = try(local.addon_versions.coredns, null)
-    }
     kube-proxy = {
       version = try(local.addon_versions.kube_proxy, null)
     }
     aws-ebs-csi-driver = {
       version = try(local.addon_versions.ebs_csi, null)
+    }
+  }
+
+  node_dependent_addons = {
+    coredns = {
+      version = try(local.addon_versions.coredns, null)
     }
   }
 }
@@ -51,6 +54,24 @@ resource "aws_eks_addon" "this" {
   tags = merge(var.tags, {
     component = "eks-addon"
   })
+}
+
+resource "aws_eks_addon" "node_dependent" {
+  for_each = local.node_dependent_addons
+
+  cluster_name                = aws_eks_cluster.this.name
+  addon_name                  = each.key
+  addon_version               = each.value.version
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "PRESERVE"
+
+  tags = merge(var.tags, {
+    component = "eks-addon"
+  })
+
+  depends_on = [
+    aws_eks_node_group.default,
+  ]
 }
 
 resource "aws_eks_node_group" "default" {

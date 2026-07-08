@@ -78,7 +78,7 @@ The application database contract remains the existing PostgreSQL contract. No a
 The EKS module defines the first AWS Kubernetes runtime target for future GitOps deployment work. It uses:
 
 - cluster name `flagforge-dev` in the `dev` composition;
-- Kubernetes version `1.30` by default;
+- Kubernetes version `1.34` by default;
 - public and private endpoint access assumptions for the learning target;
 - a development-sized managed node group with one to three `t3.small` nodes and desired size two;
 - baseline add-on declarations for VPC CNI, CoreDNS, kube-proxy, and EBS CSI;
