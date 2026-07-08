@@ -52,6 +52,12 @@ jobs:
       - name: OpenAPI Validate
         run: npm run openapi:validate
 
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: AWS GitOps Validate
+        run: npm run gitops:aws:validate
+
       - name: Migrate
         run: npm run db:migrate
 

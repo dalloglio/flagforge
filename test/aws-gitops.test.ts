@@ -15,15 +15,18 @@ describe("AWS GitOps desired state", () => {
       "infra/aws/gitops/dev/us-east-1/values-aws-dev.yaml",
     );
 
+    expect(values).toContain("replicaCount: 1");
     expect(values).toContain(
-      "<aws-account-id>.dkr.ecr.us-east-1.amazonaws.com/flagforge-api",
+      "aws-account-id.dkr.ecr.us-east-1.amazonaws.com/flagforge-api",
     );
-    expect(values).toContain('tag: "<yyyymmdd>.<short-sha>"');
+    expect(values).toContain('tag: "yyyymmdd.short-sha"');
+    expect(values).not.toMatch(/<[^>\n]+>/);
     expect(values).toContain("create: false");
     expect(values).toContain("existingSecret: flagforge-api-runtime");
     expect(values).not.toMatch(/\b\d{12}\b/);
     expect(values).not.toContain("dev-admin-api-key");
     expect(values).not.toContain("postgres://");
+    expect(values).not.toMatch(/https?:\/\/[^"\s]+/);
   });
 
   it("points the AWS Application at the Helm chart and AWS values", () => {
@@ -52,5 +55,16 @@ describe("AWS GitOps desired state", () => {
     expect(script).not.toMatch(/\b(kubectl|argocd|docker)\b/);
     expect(script).not.toMatch(/\baws\s+/);
     expect(packageJson.scripts.verify).not.toContain("gitops:aws:validate");
+  });
+
+  it("documents Host header smoke checks for the host-specific ALB ingress", () => {
+    const runbook = readRepoFile("docs/runbooks/aws-gitops-deployment.md");
+
+    expect(runbook).toContain(
+      'curl -fsS -H "Host: flagforge-dev.example.invalid" http://<alb-dns-name>/healthz',
+    );
+    expect(runbook).toContain(
+      'curl -fsS -H "Host: flagforge-dev.example.invalid" http://<alb-dns-name>/readyz',
+    );
   });
 });

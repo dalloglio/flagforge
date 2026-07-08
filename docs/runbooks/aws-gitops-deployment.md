@@ -36,8 +36,9 @@ The AWS GitOps target consumes existing platform contracts:
   reference, password reference, TLS expectation, and existing SQL migrations
   through `npm run db:migrate`.
 - ECR: image URI shape
-  `<aws-account-id>.dkr.ecr.us-east-1.amazonaws.com/flagforge-api:<tag>` and
-  reviewed commit-addressable tags such as `<yyyymmdd>.<short-sha>`.
+  `aws-account-id.dkr.ecr.us-east-1.amazonaws.com/flagforge-api:yyyymmdd.short-sha`
+  in committed placeholders, with real reviewed commit-addressable tags supplied
+  before live sync.
 - Helm: chart-owned Deployment, Service, ConfigMap, optional Ingress, probes,
   and secret references.
 - Argo CD: repository access to this repo, Application reconciliation, manual
@@ -50,9 +51,8 @@ ECR, migration, or production edge contracts.
 
 1. Publish and review a FlagForge API image using the ECR image publishing
    workflow.
-2. Select a specific commit-addressable tag such as
-   `<yyyymmdd>.<short-sha>`. Do not promote `latest` as the only deployable
-   reference.
+2. Select a specific commit-addressable tag such as `20260708.a1b2c3d`. Do not
+   promote `latest` as the only deployable reference.
 3. Open a pull request that updates
    `infra/aws/gitops/dev/us-east-1/values-aws-dev.yaml`.
 4. Run credential-free pull request validation:
@@ -79,6 +79,19 @@ placeholder account values, and external secret references. It must not include
 real AWS account IDs, credentials, kubeconfigs, Argo CD credentials, cloud
 tokens, copied cloud outputs, personal data, customer data, production-only
 identifiers, or live secret values.
+
+The AWS `dev` values intentionally start with placeholder image values such as
+`aws-account-id.dkr.ecr.us-east-1.amazonaws.com/flagforge-api` and
+`yyyymmdd.short-sha`. Replace them with reviewed account-backed ECR repository
+and image tag values before any real sync. Do not commit the real AWS account ID
+or a production-only tag unless a separate reviewed architecture decision or
+promotion change explicitly allows it.
+
+AWS `dev` also starts with `replicaCount: 1` because the current administrative
+rate limiter is in memory per application process. Use `replicaCount > 1` only
+after shared rate limiting, gateway-level rate limiting, or another explicit
+architecture decision addresses the effective limit across pods. This PR does
+not change application runtime behavior.
 
 The AWS values reference an existing Kubernetes Secret named
 `flagforge-api-runtime`. That Secret, or an equivalent external secret
@@ -116,13 +129,17 @@ argocd app sync flagforge-api-aws-dev
 argocd app wait flagforge-api-aws-dev --health --sync --timeout 300
 kubectl -n flagforge rollout status deployment/flagforge-api --timeout=300s
 kubectl -n flagforge get ingress flagforge-api
-curl -fsS http://<alb-dns-name>/healthz
-curl -fsS http://<alb-dns-name>/readyz
+curl -fsS -H "Host: flagforge-dev.example.invalid" http://<alb-dns-name>/healthz
+curl -fsS -H "Host: flagforge-dev.example.invalid" http://<alb-dns-name>/readyz
 ```
 
 These checks are intentionally outside `npm run verify`. Product-level ingress
 validation confirms the API is reachable through the ALB path without changing
-public API semantics.
+public API semantics. The Host header must match the host configured on the
+Ingress while DNS is still a placeholder. After the Ingress host is updated to a
+real DNS name that points at the ALB, the operator may test directly with that
+configured hostname, for example
+`curl -fsS http://<configured-ingress-host>/healthz`.
 
 ## Drift Inspection
 
