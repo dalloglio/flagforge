@@ -38,7 +38,7 @@ Level 1 local platform work will simulate operational delivery locally before cl
 - PostgreSQL in the local platform.
 - OpenTelemetry, Prometheus, and Grafana for observability.
 
-Level 3 AWS work is a future target architecture, not current runtime implementation. The repository has an `infra/aws/` OpenTofu/Terragrunt foundation for future AWS work. It includes static-validation scaffolding plus an RDS PostgreSQL contract target for reviewable database architecture, but default workflows still do not provision cloud resources.
+Level 3 AWS work is a future target architecture, not current runtime implementation. The repository has an `infra/aws/` OpenTofu/Terragrunt foundation for future AWS work. It includes static-validation scaffolding plus RDS PostgreSQL, EKS, and ALB contract targets for reviewable database, cluster, and ingress architecture, but default workflows still do not provision cloud resources.
 
 ## Guardrails
 
@@ -47,4 +47,5 @@ Level 3 AWS work is a future target architecture, not current runtime implementa
 - Do not introduce additional persistence or platform behavior before an active change requests it.
 - Keep `src/` and `test/` untouched for documentation-only workflow foundation changes.
 - Keep AWS IaC validation separate from account-backed `plan`, `apply`, `destroy`, import, state mutation, remote state, and credentialed cloud access until a future OpenSpec change introduces those workflows.
-- Keep RDS networking as externally supplied references until future AWS networking and remote-state changes provide real VPC, subnet, and security-group outputs.
+- Keep RDS, EKS, and ALB networking as externally supplied references until future AWS networking and remote-state changes provide real VPC, subnet, and security-group outputs.
+- Keep EKS IAM/OIDC, node roles, ALB controller identity, kubeconfig generation, and live-cluster access as future reviewed workflows; current EKS/ALB contracts use static references only.
