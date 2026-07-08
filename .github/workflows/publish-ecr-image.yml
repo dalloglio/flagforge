@@ -23,14 +23,34 @@ jobs:
   publish:
     name: Build, scan, and publish image
     runs-on: ubuntu-latest
-    if: vars.ECR_PUBLISHING_ENABLED == 'true'
     environment: aws-dev
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Check publishing activation
+        id: activation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${ECR_PUBLISHING_ENABLED}" == "true" ]]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "enabled=false" >> "${GITHUB_OUTPUT}"
+          {
+            echo "ECR image publishing skipped"
+            echo ""
+            echo "Set ECR_PUBLISHING_ENABLED=true after AWS prerequisites are reviewed."
+          } >> "${GITHUB_STEP_SUMMARY}"
+        env:
+          ECR_PUBLISHING_ENABLED: ${{ vars.ECR_PUBLISHING_ENABLED }}
+
       - name: Prepare image metadata
         id: image
+        if: steps.activation.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -55,6 +75,7 @@ jobs:
           AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
 
       - name: Build image
+        if: steps.activation.outputs.enabled == 'true'
         run: |
           docker build \
             -t "${ECR_REPOSITORY}:${IMAGE_TAG}" \
@@ -62,6 +83,7 @@ jobs:
             .
 
       - name: Scan image with Trivy
+        if: steps.activation.outputs.enabled == 'true'
         uses: aquasecurity/trivy-action@0.32.0
         with:
           image-ref: ${{ env.ECR_REPOSITORY }}:${{ steps.image.outputs.image_tag }}
@@ -71,20 +93,24 @@ jobs:
           format: table
 
       - name: Configure AWS credentials
+        if: steps.activation.outputs.enabled == 'true'
         uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_NAME }}
 
       - name: Log in to ECR
+        if: steps.activation.outputs.enabled == 'true'
         uses: aws-actions/amazon-ecr-login@v2
         with:
           registries: ${{ vars.AWS_ACCOUNT_ID }}
 
       - name: Push image
+        if: steps.activation.outputs.enabled == 'true'
         run: docker push "${IMAGE_URI}"
 
       - name: Publish summary
+        if: steps.activation.outputs.enabled == 'true'
         run: |
           {
             echo "Published FlagForge API image"

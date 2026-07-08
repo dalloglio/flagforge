@@ -23,7 +23,7 @@ Future EKS, Helm, and Argo CD changes must consume a specific published tag or a
 
 The workflow file is `.github/workflows/publish-ecr-image.yml`. It is publish-capable only for protected `main` branch pushes and manual `workflow_dispatch` runs, and it does not run for pull request events.
 
-Publishing is disabled unless `ECR_PUBLISHING_ENABLED=true` is configured as a repository or `aws-dev` environment variable. Do not enable this variable until a future account-backed OpenSpec change provisions and reviews:
+Publishing is disabled unless `ECR_PUBLISHING_ENABLED=true` is configured as a repository or `aws-dev` environment variable. The workflow checks this setting after the `aws-dev` environment is declared so protected environment variables can activate publishing; when it is absent or not `true`, Docker build, Trivy scanning, AWS authentication, ECR login, and image push steps are skipped. Do not enable this variable until a future account-backed OpenSpec change provisions and reviews:
 
 - ECR repository `flagforge-api`.
 - ECR lifecycle policy.
