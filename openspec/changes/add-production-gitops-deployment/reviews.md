@@ -81,4 +81,3 @@ Follow-ups:
 - Add or document focused checks that prove the AWS values render with the existing Helm chart and do not render chart-managed plaintext secrets for production-style values.
 - Include negative review cases for mutable-only image tags, accidental raw workload manifests, committed secret values, and live/cloud checks creeping into `npm run verify`.
 - Before completion, run focused validation plus `npm run verify` and strict OpenSpec validation, then record any skipped live checks with the prerequisite that made them unavailable.
-
