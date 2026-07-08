@@ -10,6 +10,9 @@ node_modules/
 **/*.tfplan
 **/*.tfvars
 **/*.tfvars.json
+infra/aws/**/*.log
+infra/aws/**/kubeconfig
+infra/aws/**/kubeconfig.*
 **/crash.log
 **/crash.*.log
 **/override.tf
