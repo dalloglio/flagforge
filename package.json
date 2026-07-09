@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "openapi:validate": "redocly lint docs/api/openapi.yaml",
     "openapi:preview": "redocly build-docs docs/api/openapi.yaml --output /tmp/flagforge-openapi.html --title \"FlagForge API\"",
+    "gitops:aws:validate": "helm lint charts/flagforge-api --values infra/aws/gitops/dev/us-east-1/values-aws-dev.yaml && helm template flagforge-api charts/flagforge-api --namespace flagforge --values infra/aws/gitops/dev/us-east-1/values-aws-dev.yaml > /tmp/flagforge-aws-gitops-rendered.yaml",
     "openspec:validate": "openspec validate --all --strict",
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run openapi:validate && npm run openspec:validate"
   },
