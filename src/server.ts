@@ -1,18 +1,37 @@
 import "./local-env.js";
 
-import { parseAdminAuthConfig } from "./api/admin-auth.js";
-import { parseAdminRateLimitConfig } from "./api/admin-rate-limit.js";
-import { createApp } from "./api/app.js";
-import { parseDatabaseConfig } from "./infrastructure/postgres/config.js";
-import { createPostgresUseCases } from "./infrastructure/postgres/dependencies.js";
-import { createPostgresReadinessCheck } from "./infrastructure/postgres/readiness.js";
+import { parseTelemetryConfig } from "./infrastructure/telemetry/config.js";
 import {
-  assertPostgresAvailable,
-  createPostgresPool,
-} from "./infrastructure/postgres/pool.js";
+  startTelemetry,
+  type TelemetryHandle,
+} from "./infrastructure/telemetry/index.js";
 import { describeRuntimeStartupError } from "./runtime-startup.js";
 
 async function main() {
+  const telemetry = startTelemetry(parseTelemetryConfig());
+
+  try {
+    await startServer(telemetry);
+  } catch (error) {
+    await telemetry.shutdown();
+    throw error;
+  }
+}
+
+async function startServer(telemetry: TelemetryHandle) {
+  const { parseAdminAuthConfig } = await import("./api/admin-auth.js");
+  const { parseAdminRateLimitConfig } =
+    await import("./api/admin-rate-limit.js");
+  const { createApp } = await import("./api/app.js");
+  const { parseDatabaseConfig } =
+    await import("./infrastructure/postgres/config.js");
+  const { createPostgresUseCases } =
+    await import("./infrastructure/postgres/dependencies.js");
+  const { createPostgresReadinessCheck } =
+    await import("./infrastructure/postgres/readiness.js");
+  const { assertPostgresAvailable, createPostgresPool } =
+    await import("./infrastructure/postgres/pool.js");
+
   const port = Number(process.env.PORT ?? 3000);
   const adminAuth = parseAdminAuthConfig();
   const adminRateLimit = parseAdminRateLimitConfig();
@@ -35,6 +54,7 @@ async function main() {
 
   server.on("close", () => {
     void pool.end();
+    void telemetry.shutdown();
   });
 }
 

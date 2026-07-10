@@ -10,6 +10,9 @@ PORT=3000
 ADMIN_API_KEY=dev-admin-api-key
 ADMIN_RATE_LIMIT_REQUESTS=60
 ADMIN_RATE_LIMIT_WINDOW_MS=60000
+FLAGFORGE_OTEL_ENABLED=false
+FLAGFORGE_OTEL_EXPORTER=
+OTEL_SERVICE_NAME=flagforge-api
 KONG_PROXY_PORT=8000
 PROMETHEUS_PORT=9090
 GRAFANA_PORT=3001
@@ -21,7 +24,7 @@ TEST_DATABASE_URL=postgres://flagforge:flagforge@localhost:5433/flagforge_test
 
 `COMPOSE_PROJECT_NAME` is read by Docker Compose on the host to isolate project resources such as containers, networks, and volumes. It is not a container runtime setting.
 
-`ADMIN_API_KEY` is required when starting the API outside tests. Use a non-secret local value such as `dev-admin-api-key`; protected admin endpoints accept it only through the `X-Admin-API-Key` request header. `ADMIN_RATE_LIMIT_REQUESTS` and `ADMIN_RATE_LIMIT_WINDOW_MS` configure the local in-process fixed-window admin API rate limit. The defaults allow 60 protected admin requests per 60,000 milliseconds for the authenticated admin identity. `DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`, even though the `TEST_` values live in the same local `.env` file.
+`ADMIN_API_KEY` is required when starting the API outside tests. Use a non-secret local value such as `dev-admin-api-key`; protected admin endpoints accept it only through the `X-Admin-API-Key` request header. `ADMIN_RATE_LIMIT_REQUESTS` and `ADMIN_RATE_LIMIT_WINDOW_MS` configure the local in-process fixed-window admin API rate limit. The defaults allow 60 protected admin requests per 60,000 milliseconds for the authenticated admin identity. `FLAGFORGE_OTEL_ENABLED=false` keeps OpenTelemetry disabled by default. Set `FLAGFORGE_OTEL_ENABLED=true` with `FLAGFORGE_OTEL_EXPORTER=console` to enable local console trace export. `OTEL_SERVICE_NAME` defaults to `flagforge-api` and is safe to leave unchanged for local validation. `DATABASE_URL` is used by the API runtime and `npm run db:migrate`. `TEST_DATABASE_URL` is used only by PostgreSQL integration tests. Those tests are destructive for the configured test database and never fall back to `DATABASE_URL`, even though the `TEST_` values live in the same local `.env` file.
 
 Keep `DATABASE_URL` and `TEST_DATABASE_URL` explicit. If you change `DATABASE_PORT` or `TEST_DATABASE_PORT`, update the matching URL port as well; local dotenv loading does not compose URL values from other variables.
 
@@ -33,6 +36,9 @@ PORT=3017
 ADMIN_API_KEY=dev-admin-api-key
 ADMIN_RATE_LIMIT_REQUESTS=60
 ADMIN_RATE_LIMIT_WINDOW_MS=60000
+FLAGFORGE_OTEL_ENABLED=false
+FLAGFORGE_OTEL_EXPORTER=
+OTEL_SERVICE_NAME=flagforge-api
 KONG_PROXY_PORT=8017
 PROMETHEUS_PORT=9117
 GRAFANA_PORT=3117
@@ -85,6 +91,40 @@ curl -i -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/f
 ```
 
 The first protected request is allowed, the second returns HTTP `429` with the standard error body and a `Retry-After` header, and the final request succeeds after the fixed window resets. Missing or invalid `X-Admin-API-Key` values still return HTTP `401` before rate-limit accounting. `/health`, `/healthz`, `/readyz`, and `/metrics` do not require or consume admin rate-limit budget.
+
+## Local OpenTelemetry
+
+OpenTelemetry API runtime tracing is disabled by default and does not require an OpenTelemetry Collector, Datadog, AWS, EKS, Kubernetes, or a production tracing backend. Disabled or unset configuration leaves existing API routes, PostgreSQL startup validation, health/readiness behavior, Prometheus `/metrics`, admin authentication, and admin rate limiting unchanged.
+
+Supported local configuration:
+
+```bash
+FLAGFORGE_OTEL_ENABLED=false
+FLAGFORGE_OTEL_EXPORTER=
+OTEL_SERVICE_NAME=flagforge-api
+```
+
+Use `FLAGFORGE_OTEL_ENABLED=false` or omit the variable to disable instrumentation. Use `FLAGFORGE_OTEL_ENABLED=true` with `FLAGFORGE_OTEL_EXPORTER=console` to enable the local validation export path. `console` is the only supported exporter in this increment. `OTEL_SERVICE_NAME` can override the service name attached to emitted telemetry; leave it as `flagforge-api` unless a local experiment needs a distinct label.
+
+Validate local HTTP trace emission without a collector:
+
+```bash
+docker compose up -d postgres
+npm run db:migrate
+FLAGFORGE_OTEL_ENABLED=true FLAGFORGE_OTEL_EXPORTER=console npm run dev
+```
+
+In another terminal, generate traffic:
+
+```bash
+curl --fail http://localhost:${PORT:-3000}/healthz
+curl -i -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/flags
+curl -i -H 'X-Admin-API-Key: dev-admin-api-key' http://localhost:${PORT:-3000}/flags/missing?apiKey=ignored
+```
+
+The API process logs console-exported OpenTelemetry HTTP spans for served requests. Expected span attributes are limited to low-cardinality HTTP method, route template or fallback route, and response status metadata. Raw URLs, query strings, path parameter values, request bodies, feature flag evaluation context values, admin API keys, PostgreSQL URLs, credentials, and secret values are intentionally not exported.
+
+This local workflow is only for runtime trace validation. It does not deploy an OpenTelemetry Collector, configure OTLP, create dashboards, change Prometheus `/metrics`, add OpenTelemetry metrics, add custom domain spans, or integrate with Datadog, AWS, EKS, Kubernetes, or vendor-managed tracing.
 
 Run checks:
 
@@ -512,6 +552,14 @@ If the Grafana dashboard is missing, recreate Grafana with `docker compose up -d
 
 If Prometheus or Grafana host ports are unavailable, set `PROMETHEUS_PORT` or `GRAFANA_PORT` to unused ports and restart the services. Keep `PORT`, `KONG_PROXY_PORT`, `PROMETHEUS_PORT`, and `GRAFANA_PORT` distinct in parallel worktrees.
 
+If OpenTelemetry spans are missing, confirm `FLAGFORGE_OTEL_ENABLED=true` and `FLAGFORGE_OTEL_EXPORTER=console` are set in the same shell that starts `npm run dev` or the Compose app service. OpenTelemetry is disabled by default and `FLAGFORGE_OTEL_EXPORTER=console` alone does not enable it.
+
+If startup fails with `FLAGFORGE_OTEL_EXPORTER is required when FLAGFORGE_OTEL_ENABLED is true`, either set `FLAGFORGE_OTEL_EXPORTER=console` for local validation or set `FLAGFORGE_OTEL_ENABLED=false` to disable instrumentation.
+
+If startup fails with `FLAGFORGE_OTEL_EXPORTER must be 'console' for local OpenTelemetry validation`, remove unsupported collector, OTLP, Datadog, AWS, EKS, Kubernetes, or vendor exporter assumptions from the local environment. Collector and vendor backend integration are out of scope for this workflow.
+
+If console-exported spans appear but expected route labels are missing, generate traffic against known Express routes such as `/healthz`, `/flags`, or `/flags/:key`. Unmatched or malformed requests use the stable fallback route label `unmatched` instead of raw request URLs.
+
 ## Out of Scope
 
-Local Kong and kind workflows do not add authentication, authorization, production hardening, Argo CD, cloud deployment, registry publishing, or observability. Local Prometheus and Grafana do not add production SLOs, alerting, OpenTelemetry Collector deployment, AWS observability, EKS observability, Datadog, or vendor-managed monitoring. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
+Local Kong and kind workflows do not add authentication, authorization, production hardening, Argo CD, cloud deployment, registry publishing, or observability. Local Prometheus and Grafana do not add production SLOs, alerting, OpenTelemetry Collector deployment, AWS observability, EKS observability, Datadog, or vendor-managed monitoring. Local OpenTelemetry console export does not add a collector, OTLP, vendor backend, dashboards, metrics, or custom domain spans. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
