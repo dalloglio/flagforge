@@ -2,7 +2,10 @@
 
 ## Service
 
-AWS EKS and ALB static runtime contract target for future FlagForge Level 3 AWS deployment work.
+Completed FlagForge v1 Level 3 EKS and ALB static contracts for future
+account-backed deployment work. See the
+[project status](../project-status.md) for their evidence classification and
+current limitations.
 
 ## Purpose
 

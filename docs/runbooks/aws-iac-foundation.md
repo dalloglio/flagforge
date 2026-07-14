@@ -2,7 +2,10 @@
 
 ## Service
 
-AWS IaC foundation for future FlagForge Level 3 OpenTofu and Terragrunt work, including the static RDS PostgreSQL contract target.
+Completed FlagForge v1 Level 3 OpenTofu and Terragrunt foundation/contract
+scope, including static RDS PostgreSQL, EKS, and ALB targets. Current lifecycle
+and evidence classifications live in `docs/project-status.md`; account-backed
+AWS execution remains future work.
 
 ## Purpose
 
@@ -65,6 +68,9 @@ For this foundation, default no-provisioning verification is source inspection:
 
 - confirm `infra/aws/modules/foundation/` contains no `resource` blocks;
 - confirm `infra/aws/modules/rds-postgresql/` only defines the RDS contract and does not create VPC, subnet, route table, NAT gateway, internet gateway, or security-group resources;
+- confirm the EKS and ALB modules contain only their reviewed static contract
+  resources and consume network/IAM references rather than creating those
+  external dependencies;
 - confirm `infra/aws/live/dev/us-east-1/rds-postgresql/` uses only static-validation mock network values and documents them as invalid for real plan or apply;
 - confirm `package.json`, `Makefile`, and CI workflows do not invoke account-backed or state-mutating IaC commands;
 - confirm no state files, plan files, generated provider files, `.terraform/`, `.terragrunt-cache/`, `.tfvars`, credentials, account IDs, SSO URLs, or production values are committed.
@@ -82,7 +88,9 @@ Successful validation means:
 - OpenSpec strict validation passes for the change;
 - repository verification remains independent from OpenTofu, Terragrunt, AWS credentials, remote state, and cloud access;
 - IaC static validation passes locally when the optional CLIs are installed, or the missing local CLI prerequisite is documented;
-- source inspection confirms no AWS resources are declared or provisioned.
+- source inspection confirms only the reviewed static RDS, EKS, and ALB
+  resource contracts are declared and no AWS resource is provisioned by
+  validation.
 
 ## Rollback and Cleanup
 

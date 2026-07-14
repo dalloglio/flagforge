@@ -2,7 +2,9 @@
 
 ## Service
 
-FlagForge API container image publishing to AWS Elastic Container Registry for the future Level 3 AWS delivery path.
+Prepared but externally dependent FlagForge API image publishing path for the
+completed v1 Level 3 foundation/contract scope. See the
+[project status](../project-status.md) for the current evidence classification.
 
 ## Purpose
 
@@ -17,7 +19,9 @@ This runbook documents the image publishing contract, activation prerequisites, 
 - Image URI shape: `<aws-account-id>.dkr.ecr.us-east-1.amazonaws.com/flagforge-api:<tag>`.
 - First tag format: `<yyyymmdd>.<short-sha>`, for example `20260704.abcd123`.
 
-Future EKS, Helm, and Argo CD changes must consume a specific published tag or another reviewed immutable reference. Mutable-only tags such as `latest` are not sufficient as the only deployable reference.
+The AWS GitOps desired state and any future live EKS deployment must consume a
+specific published tag or another reviewed immutable reference. Mutable-only
+tags such as `latest` are not sufficient as the only deployable reference.
 
 ## Activation Prerequisites
 
