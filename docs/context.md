@@ -6,10 +6,13 @@ FlagForge is a small TypeScript/Express feature flag API used to learn OpenSpec,
 
 ## Focused Context
 
-- `docs/context/product.md`: product intent, audience, current scope, future scope, and non-goals.
+- `docs/context/product.md`: original intent, delivered product and platform
+  scope, non-goals, optional v2 directions, and maintenance state.
 - `docs/context/domain-glossary.md`: feature flag domain vocabulary.
 - `docs/context/architecture.md`: runtime boundaries, architectural direction, persistence direction, and platform guardrails.
 - `docs/context/delivery-workflow.md`: OpenSpec, GitHub, review-role, template, and command-wrapper workflow.
+- `docs/project-status.md`: current lifecycle, evidence classification,
+  limitations, maintenance rules, and release-readiness record.
 
 ## Source of Truth
 
@@ -19,6 +22,7 @@ The chat is an interface, not the source of truth. Durable project knowledge bel
 - `openspec/changes/`: proposed behavior changes before implementation.
 - `docs/adr/`: durable accepted architecture, platform, tooling, and workflow decisions.
 - `docs/context/`: focused context documents.
+- `docs/project-status.md`: current roadmap and lifecycle status.
 - `docs/templates/`: reusable planning, design, quality, security, operations, and review templates.
 - `docs/agent-playbooks/`: role-based review playbooks.
 - `docs/decision-log.md`: chronological learning notes and decision history.
@@ -58,6 +62,8 @@ Use Conventional Commits for commit messages, such as `feat: add evaluation rout
 - `src/application/` owns feature flag and audit-log use case orchestration.
 - `src/domain/` owns flag types, Zod schemas, repository contracts, audit event construction, and evaluation logic.
 - `src/infrastructure/postgres/` owns PostgreSQL configuration, migrations, adapters, and transaction support.
+- `src/infrastructure/telemetry/` owns optional local OpenTelemetry startup and
+  HTTP instrumentation.
 - Tests live in `test/` and mirror API/domain boundaries.
 - Runtime storage uses PostgreSQL.
 - In-memory repositories remain explicit test doubles for focused tests.
@@ -75,7 +81,14 @@ Rollout evaluation runs after disabled-state and rule eligibility checks. Rollou
 
 The API also records audit events for successful flag mutations and exposes a read-only audit log.
 
-The MVP intentionally avoids persistence, authentication, authorization, tenancy, segments, environments, and SDKs.
+Administrative endpoints use API-key authentication and local in-process rate
+limiting. Operational endpoints expose health, liveness, readiness, and
+Prometheus metrics; optional local OpenTelemetry console tracing is disabled by
+default.
+
+V1 deliberately excludes tenancy, multiple flag environments, SDKs, segments,
+full RBAC, distributed rate limiting, production secret management, and live
+cloud operation.
 
 ## Agent Rules
 
@@ -84,8 +97,12 @@ The MVP intentionally avoids persistence, authentication, authorization, tenancy
 - Keep changes small.
 - Use Conventional Commits for commit messages.
 - Run `npm run verify` before marking work complete.
-- Do not introduce persistence unless the active OpenSpec change requests it.
+- PostgreSQL is the implemented runtime persistence path; do not add another
+  persistence technology unless an active OpenSpec change requests it.
 - Do not change public API behavior without updating OpenSpec specs and `docs/api/openapi.yaml`.
+- Keep `docs/project-status.md` and affected README/context summaries aligned
+  when maintenance work changes lifecycle state, evidence, limitations, or
+  committed scope.
 
 ## Context Engineering Rule
 

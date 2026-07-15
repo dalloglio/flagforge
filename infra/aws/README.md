@@ -1,6 +1,14 @@
 # AWS IaC Foundation
 
-This directory is the source-controlled OpenTofu and Terragrunt foundation for future FlagForge Level 3 AWS work. It now includes static RDS PostgreSQL, EKS, and ALB contract targets for the first non-production `dev` environment. It does not create ECR, production deployment, Atlantis, Terrareg, automatic apply workflows, account-backed plan/apply targets, or AWS networking resources.
+This directory is the completed source-controlled OpenTofu and Terragrunt
+foundation/contract scope for the FlagForge v1 Level 3 learning roadmap. It
+includes static RDS PostgreSQL, EKS, and ALB contract targets for the first
+non-production `dev` environment. Live AWS execution remains future,
+externally dependent work: this directory does not create ECR, production
+deployment, Atlantis, Terrareg, automatic apply workflows, account-backed
+plan/apply targets, or AWS networking resources. See the
+[project status](../../docs/project-status.md) for the current lifecycle and
+evidence classification.
 
 The committed RDS, EKS, and ALB compositions are source-controlled for review and local static checks only. They are not plan/apply-ready until future account, networking, IAM/OIDC, and remote-state changes provide real dependencies and reviewed workflows.
 
@@ -104,7 +112,8 @@ The first target is learning-focused and non-production. A passing static check 
 
 ## ALB Ingress Contract
 
-The ALB module defines AWS ALB as the Level 3 ingress path for future EKS workloads. It uses:
+The ALB module defines AWS ALB as the Level 3 ingress contract for a future live
+EKS workload deployment. It uses:
 
 - ALB name `flagforge-dev-alb` in the `dev` composition;
 - explicit exposure mode, defaulting to `internet-facing` for non-production learning and inspection;

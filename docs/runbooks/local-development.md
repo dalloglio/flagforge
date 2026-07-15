@@ -562,4 +562,13 @@ If console-exported spans appear but expected route labels are missing, generate
 
 ## Out of Scope
 
-Local Kong and kind workflows do not add authentication, authorization, production hardening, Argo CD, cloud deployment, registry publishing, or observability. Local Prometheus and Grafana do not add production SLOs, alerting, OpenTelemetry Collector deployment, AWS observability, EKS observability, Datadog, or vendor-managed monitoring. Local OpenTelemetry console export does not add a collector, OTLP, vendor backend, dashboards, metrics, or custom domain spans. Admin API rate limiting is currently local in-process application behavior, not distributed production quota enforcement.
+Local Kong and kind workflows do not themselves provide application
+authentication or authorization, production hardening, cloud deployment,
+registry publishing, or observability. Authentication and rate limiting remain
+application behavior; Argo CD and observability use the separate local paths in
+this runbook. Local Prometheus and Grafana do not add production SLOs, alerting,
+OpenTelemetry Collector deployment, AWS observability, EKS observability,
+Datadog, or vendor-managed monitoring. Local OpenTelemetry console export does
+not add a collector, OTLP, vendor backend, dashboards, metrics, or custom domain
+spans. Admin API rate limiting is local in-process application behavior, not
+distributed production quota enforcement.

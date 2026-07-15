@@ -2,7 +2,9 @@
 
 ## Service
 
-AWS RDS PostgreSQL contract target for future FlagForge Level 3 AWS deployment work.
+Completed FlagForge v1 Level 3 RDS PostgreSQL contract for future account-backed
+deployment work. See the [project status](../project-status.md) for its static
+evidence classification and current limitations.
 
 ## Purpose
 

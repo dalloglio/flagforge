@@ -2,7 +2,16 @@
 
 ## Agent Context
 
-Read `docs/context.md` for the project context map. Use the focused files under `docs/context/` for product intent, domain vocabulary, architecture boundaries, and delivery workflow. Durable accepted decisions live in `docs/adr/`; `docs/decision-log.md` is a chronological learning log. Use `docs/templates/` for reusable planning/review artifacts and `docs/agent-playbooks/` for role-based review guidance. Keep these files updated when important project knowledge or decisions move from chat into the repository.
+Read `docs/context.md` for the project context map and
+`docs/project-status.md` for the current lifecycle, evidence classifications,
+limitations, and release state. Use the focused files under `docs/context/` for
+product intent, domain vocabulary, architecture boundaries, and delivery
+workflow. Durable accepted decisions live in `docs/adr/`;
+`docs/decision-log.md` is a chronological learning log. Use `docs/templates/`
+for reusable planning/review artifacts and `docs/agent-playbooks/` for
+role-based review guidance. Keep affected current-status summaries aligned when
+important project knowledge, lifecycle evidence, or decisions move into the
+repository.
 
 ## Agent Skills
 
@@ -14,7 +23,13 @@ When creating or updating Codex skills, prefer the built-in `$skill-creator` ski
 
 ## Project Structure & Module Organization
 
-FlagForge is a TypeScript/Node.js feature flag API. Runtime code lives in `src/`: `src/server.ts` starts the Express server, `src/api/` contains HTTP routing and error handling, and `src/domain/` contains flag types, Zod schemas, repository logic, audit-log behavior, and evaluation behavior. Tests live in `test/` and mirror the API/domain split with files such as `test/app.test.ts` and `test/evaluator.test.ts`. OpenSpec requirements and archived change artifacts are under `openspec/`.
+FlagForge is a TypeScript/Node.js feature flag API. Runtime code lives in
+`src/`: `src/server.ts` starts the Express server, `src/api/` contains HTTP
+routing and transport concerns, `src/application/` orchestrates use cases,
+`src/domain/` owns domain types, schemas, contracts, audit construction, and
+evaluation, and `src/infrastructure/` owns PostgreSQL and telemetry adapters.
+Tests live in `test/` and mirror the API, domain, and infrastructure boundaries.
+OpenSpec requirements and archived change artifacts are under `openspec/`.
 
 ## Build, Test, and Development Commands
 
@@ -38,7 +53,13 @@ Use TypeScript with strict compiler settings. Prefer small, focused modules and 
 
 Vitest is configured with globals and the Node environment. Name test files `*.test.ts` and place them in `test/`. Use Supertest for Express endpoint coverage and direct Vitest assertions for domain behavior. Add or update tests for every behavior change, especially API status codes, error payloads, schema validation, and flag evaluation rules. Before opening a PR or considering implementation complete, run `npm run verify`. If verification fails, fix only failures directly related to the current change and report unrelated failures without broad cleanup.
 
-Use OpenSpec before implementing behavior changes. Do not introduce persistence unless the active OpenSpec change requests it; the accepted future persistence target is PostgreSQL. Do not change public API behavior without updating OpenSpec specs and `docs/api/openapi.yaml`.
+Use OpenSpec before implementing behavior changes. PostgreSQL is the implemented
+runtime persistence path; do not add or replace persistence technology unless
+the active OpenSpec change requests it. Do not change public API behavior
+without updating OpenSpec specs and `docs/api/openapi.yaml`. Documentation-only
+maintenance changes must preserve the evidence boundary between local execution,
+static contracts, externally dependent integrations, and live production
+operation.
 
 ## Commit & Pull Request Guidelines
 
