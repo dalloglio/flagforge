@@ -4,8 +4,9 @@
 
 - **Roadmap:** FlagForge v1 - learning roadmap completed.
 - **Lifecycle:** Completed portfolio project - maintenance mode.
-- **Status reviewed:** 2026-07-13 at repository commit `67e0842` while the
-  `finalize-flagforge-v1` documentation change was active.
+- **Status reviewed:** 2026-07-14 during archival of the completed
+  `finalize-flagforge-v1` documentation change, based on repository commit
+  `800038a` and the verification record below.
 - **Release state:** package and Helm chart metadata use `1.0.0`, but a
   `v1.0.0` Git tag and published GitHub release are not evidenced by repository
   metadata and remain separate external actions.
@@ -73,9 +74,8 @@ were delivered at static or externally dependent evidence levels.
   in source control and represented by main specs or archived OpenSpec changes.
 - Planned implementation pull requests and roadmap issues were reported closed
   in a point-in-time check on 2026-07-10; this must be rechecked at release time.
-- Main specs and the active finalization change must pass strict OpenSpec
-  validation, and `npm run verify` must pass before this documentation change is
-  complete.
+- Main specs and the finalization change passed strict OpenSpec validation, and
+  `npm run verify` passed before the documentation change was completed.
 - Product, architecture, lifecycle, limitations, evidence classes, runbooks,
   and contributor guidance are consolidated without unsupported production or
   live AWS claims.
@@ -83,9 +83,10 @@ were delivered at static or externally dependent evidence levels.
   workflow, Helm, GitOps, or IaC behavior change and no secrets or sensitive
   generated artifacts.
 - PM/Product, Staff Engineer, QA, SRE, and Security/LGPD review outcomes are
-  recorded in `openspec/changes/finalize-flagforge-v1/reviews.md`.
-- The finalization change is archived after implementation verification so its
-  delivery-workflow requirement becomes part of the main spec set.
+  recorded in
+  `openspec/changes/archive/2026-07-14-finalize-flagforge-v1/reviews.md`.
+- The finalization change is archived, and its versioned current-project-status
+  requirement is part of the main `delivery-workflow` spec.
 
 ## Limitations and deliberate non-goals
 
@@ -170,14 +171,14 @@ and approved workflow.
 
 ## Review and verification record
 
-| Gate                              | Current result                                                                                                                                                                          |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Staff Engineer                    | Approved with follow-ups on 2026-07-13; see change-local `reviews.md`.                                                                                                                  |
-| PM/Product                        | Approved with follow-ups on 2026-07-13; optional v2 remains uncommitted and external state requires release-time recheck.                                                               |
-| QA                                | Approved with follow-ups on 2026-07-13; mandatory tool-backed release gates remain unrun release blockers.                                                                              |
-| SRE                               | Approved with follow-ups on 2026-07-13; no live AWS or production-operation evidence is claimed.                                                                                        |
-| Security/LGPD                     | Approved with follow-ups on 2026-07-13; diff and sensitive-data checks found only documented non-secret placeholders.                                                                   |
-| Documentation change verification | Passed on 2026-07-13: change/all strict OpenSpec validation, 24 OpenSpec items, `npm run verify`, 11 test files/83 tests, OpenAPI, formatting, links, scope, and sensitive-data checks. |
+| Gate                              | Current result                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Staff Engineer                    | Approved with follow-ups on 2026-07-13; see change-local `reviews.md`.                                                                                                                                                                                                                                                                               |
+| PM/Product                        | Approved with follow-ups on 2026-07-13; optional v2 remains uncommitted and external state requires release-time recheck.                                                                                                                                                                                                                            |
+| QA                                | Approved with follow-ups on 2026-07-13; mandatory tool-backed release gates remain unrun release blockers.                                                                                                                                                                                                                                           |
+| SRE                               | Approved with follow-ups on 2026-07-13; no live AWS or production-operation evidence is claimed.                                                                                                                                                                                                                                                     |
+| Security/LGPD                     | Approved with follow-ups on 2026-07-13; diff and sensitive-data checks found only documented non-secret placeholders.                                                                                                                                                                                                                                |
+| Documentation change verification | Passed before archival on 2026-07-13: change/all strict OpenSpec validation, 24 OpenSpec items, `npm run verify`, 11 test files/83 tests, OpenAPI, formatting, links, scope, and sensitive-data checks. Repassed after sync and archival on 2026-07-14: `npm run verify`, 23 active OpenSpec specs, 11 test files/83 tests, OpenAPI, and formatting. |
 
 ## Repository-external follow-ups
 
