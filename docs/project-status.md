@@ -16,6 +16,20 @@ Level 3 foundation/contract learning outcomes are represented in source control
 at the evidence levels below. It does not mean FlagForge is a production SaaS,
 a continuously operated AWS service, or covered by production support promises.
 
+## Active maintenance experiments
+
+- **Local self-healing verification loop:** planned on 2026-09-19 in
+  `openspec/changes/add-local-self-healing-verification-loop/` as a
+  maintenance-mode engineering-learning/tooling experiment. It is not a new v1
+  product feature and does not turn the optional v2 directions below into a
+  committed roadmap.
+- **Current evidence:** planning artifacts only. No controller implementation,
+  live Codex repair, hardened isolation, CI repair automation, release evidence,
+  or production capability is claimed by this status.
+- **Planned progression:** first prove the bounded local functional loop and its
+  evidence model, then harden unattended local execution. GitHub Actions repair
+  automation requires a separate reviewed change.
+
 ## Evidence classes
 
 1. **Implemented and exercised locally:** behavior or configuration has local
