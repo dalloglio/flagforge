@@ -9,7 +9,7 @@
 ## 2. Phase 1 — Integrate Codex and independent verification
 
 - [ ] 2.1 Implement the Codex adapter using non-interactive execution, `workspace-write`, approval policy `never`, bounded sanitized context, structured completion parsing, and no commit/push behavior.
-- [ ] 2.2 Implement the protected-oracle inventory and candidate admission policy. Accept only authorized existing TypeScript implementation files under `src/domain/**` or `src/application/**`, excluding schemas/public contracts, with default cumulative limits of five files and 200 changed lines.
+- [ ] 2.2 Implement the protected-oracle inventory and deterministic file-level admission policy. Accept only operator-authorized existing TypeScript implementation files under `src/domain/**` or `src/application/**`; enforce a non-overridable initial denylist for `src/domain/schemas.ts`, `src/domain/repository.ts`, `src/domain/audit-log.ts`, and `src/application/flag-use-cases.ts`; use default cumulative limits of five files and 200 changed lines.
 - [ ] 2.3 Reject protected-file changes, new files, deletion/rename, mode/link/special-file changes, dependency/config/spec/test/API/infrastructure changes, and automatic scope expansion.
 - [ ] 2.4 Reconstruct every verifier candidate from the original baseline plus admitted cumulative implementation edits; do not verify inside the repair worker's mutable workspace.
 - [ ] 2.5 Run the unchanged `npm run verify` after every admitted candidate; only its authoritative result may produce `repaired`.
@@ -19,7 +19,7 @@
 ## 3. Phase 1 — Deterministic tests and controlled experiments
 
 - [ ] 3.1 Add fake verifier/Codex adapters and deterministic controller tests for initial green, repair success on R1/R2/R3, exhaustion, `needs_human`, `operational_error`, timeouts, malformed agent output, and interruption.
-- [ ] 3.2 Test repair policy and reconstruction: protected inputs, unauthorized paths, cumulative limits, empty patches, repeated states, stale/dirty inputs, and preservation of user files/Git history.
+- [ ] 3.2 Test repair policy and reconstruction: protected inputs, non-overridable mixed-file denylist behavior, unauthorized paths, cumulative limits, empty patches, repeated states, stale/dirty inputs, and preservation of user files/Git history.
 - [ ] 3.3 Add reversible controlled experiment fixtures for: TypeScript failure, lint/format failure when applicable, implementation-caused unit-test failure, required test/spec change, required API/infrastructure change, protected-file tampering, repeated ineffective repair, Codex/protocol failure, and initially green input.
 - [ ] 3.4 Run at least one real local Codex repair demonstration on a supported environment and record exact CLI/configuration, initial failure, attempts, candidate patch, independent verifier result, and limitations.
 - [ ] 3.5 Record Phase 1 metrics: eligible repair success, attempts, durations, gate progression, patch size, escalation/policy reasons, and available usage data. Keep initially green and ineligible runs out of the repair-success denominator.
@@ -28,7 +28,7 @@
 
 - [ ] 4.1 Create an ADR describing controller-owned success authority, frozen oracle, patch-only handoff, conservative autonomy boundaries, and the separation between functional proof, hardening, and future CI automation.
 - [ ] 4.2 Add a local runbook covering invocation, clean-input preparation, allowed repair scope, budgets, terminal outcomes, evidence, patch review/application, and known Phase 1 limitations.
-- [ ] 4.3 Update affected README/context/current-status guidance to distinguish planned design, mocked tests, live local repair evidence, hardened execution, full CI, and production evidence.
+- [ ] 4.3 Update affected README/context/current-status guidance as implementation evidence changes; preserve the planning classification already recorded in `docs/project-status.md` and distinguish planned design, mocked tests, live local repair evidence, hardened execution, full CI, and production evidence.
 - [ ] 4.4 Review Phase 1 with Staff/QA/security-operability guidance, run `npm run verify`, and run strict OpenSpec validation before claiming the functional MVP complete.
 
 ## 5. Phase 2 — Harden unattended local execution

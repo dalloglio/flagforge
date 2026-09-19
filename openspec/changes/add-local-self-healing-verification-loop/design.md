@@ -90,15 +90,13 @@ A launched repair consumes one attempt even if Codex crashes or produces no usab
 
 Initial terminal statuses:
 
-| Status | Meaning | Exit |
-| --- | --- | ---: |
-| `passed_initial` | V0 passed and integrity checks passed | 0 |
-| `repaired` | An admitted non-empty patch passed independent verification | 0 |
-| `exhausted` | Three repair attempts were consumed without verified success | 10 |
-| `needs_human` | Judgment, forbidden scope, policy violation, or no progress | 20 |
-| `operational_error` | Prerequisite, process, protocol, or evidence failure | 30 |
-| `budget_exceeded` | A configured deadline was exceeded | 40 |
-| `interrupted` | Operator cancellation | 130 |
+- `passed_initial`: V0 passed and integrity checks passed; exit 0.
+- `repaired`: an admitted non-empty patch passed independent verification; exit 0.
+- `exhausted`: three repair attempts were consumed without verified success; exit 10.
+- `needs_human`: judgment, forbidden scope, policy violation, or no progress; exit 20.
+- `operational_error`: prerequisite, process, protocol, or evidence failure; exit 30.
+- `budget_exceeded`: a configured deadline was exceeded; exit 40.
+- `interrupted`: operator cancellation; exit 130.
 
 ### 3. Phase 1 proves behavior with conservative local boundaries
 
@@ -106,14 +104,23 @@ Phase 1 requires a clean tracked worktree and no untracked non-ignored project f
 
 Use disposable copies for repair and verification. The user's checkout is never the repair workspace. A candidate is exported as a patch and reconstructed from the original baseline plus previously admitted edits before verification.
 
-The Phase 1 repair policy allows only existing regular TypeScript implementation files under:
+The Phase 1 repair policy is file-level and deliberately conservative. The operator may authorize existing regular TypeScript implementation files under:
 
 - `src/domain/**`
 - `src/application/**`
 
-with explicit exclusions for schemas and public contract/type definitions.
+but a reviewed protected-file denylist always takes precedence. Phase 1 does not attempt declaration-aware editing inside mixed files.
 
-The operator authorizes the allowed roots or files at invocation time. The controller may provide Codex read-only repository context for diagnosis, but repair edits outside the authorized implementation scope are rejected.
+The initial protected-file denylist includes:
+
+- `src/domain/schemas.ts`, because external-input validation is a protected contract surface;
+- `src/domain/repository.ts`, because repository contracts and in-memory implementation share the same file;
+- `src/domain/audit-log.ts`, because audit contracts/types and implementation share the same file;
+- `src/application/flag-use-cases.ts`, because exported application contracts/types and executable use-case implementation share the same file.
+
+An operator allowlist cannot override this protected denylist. If the required repair is inside one of these mixed files, Phase 1 returns `needs_human`. This accepts false escalations in exchange for deterministic file-level enforcement and avoids adding declaration-aware/AST patch admission to the functional MVP. A future reviewed change may split mixed files or introduce declaration-aware enforcement if evidence justifies the complexity.
+
+The controller may provide Codex read-only repository context for diagnosis, but repair edits outside the authorized implementation scope are rejected.
 
 Default cumulative limits:
 
@@ -249,7 +256,7 @@ A future change may integrate the controller after Phase 1/2 evidence exists. CI
 
 ## Risks / Trade-offs
 
-- A conservative repair scope will escalate some failures Codex could technically fix. This is intentional while calibrating autonomy.
+- A conservative file-level repair scope will escalate some failures Codex could technically fix, including repairs inside known files that mix contracts and implementation. This is intentional while calibrating autonomy and keeps Phase 1 enforcement deterministic.
 - Phase 1 reconstruction/policy inspection does not claim the same security guarantees as Phase 2 OS isolation.
 - Frozen tests can preserve an incorrect test; such cases must escalate rather than "repair" the oracle.
 - Fail-fast verification exposes only the next gate, so progress metrics must distinguish gate progression from global failure-count reduction.

@@ -41,7 +41,7 @@ The controller SHALL treat the original tests, fixtures, package inputs, quality
 
 ### Requirement: Conservative Phase 1 repair scope
 
-For the functional MVP, the controller SHALL accept repair edits only to authorized existing regular TypeScript implementation files under `src/domain/**` or `src/application/**`, with schemas and public contract/type definitions excluded. The default cumulative limit SHALL be five files and 200 added/deleted lines. New files, deletion, rename, file-mode changes, links, and special files SHALL be rejected.
+For the functional MVP, the controller SHALL use deterministic file-level admission. It SHALL accept repair edits only to operator-authorized existing regular TypeScript implementation files under `src/domain/**` or `src/application/**`, and a reviewed protected-file denylist SHALL always take precedence. The initial denylist SHALL include `src/domain/schemas.ts`, `src/domain/repository.ts`, `src/domain/audit-log.ts`, and `src/application/flag-use-cases.ts` because those files contain protected validation/contracts/types or mix those declarations with implementation. Phase 1 SHALL NOT attempt declaration-aware edits within a denied mixed file. The default cumulative limit SHALL be five files and 200 added/deleted lines. New files, deletion, rename, file-mode changes, links, and special files SHALL be rejected.
 
 #### Scenario: Repair stays inside authorized scope
 
@@ -51,9 +51,15 @@ For the functional MVP, the controller SHALL accept repair edits only to authori
 
 #### Scenario: Repair requires broader scope
 
-- **WHEN** a candidate requires an API module, infrastructure adapter, migration, dependency, test, spec, quality configuration, or any unauthorized path
+- **WHEN** a candidate requires an API module, infrastructure adapter, migration, dependency, test, spec, quality configuration, denied mixed source file, or any unauthorized path
 - **THEN** the controller rejects the candidate
 - **AND** returns `needs_human` rather than broadening scope automatically
+
+#### Scenario: Mixed source file contains contract and implementation
+
+- **WHEN** the diagnosed implementation defect is located in a protected file that also contains contract/type declarations
+- **THEN** the Phase 1 controller rejects repair edits to that entire file
+- **AND** returns `needs_human` instead of trying to distinguish declarations from implementation automatically
 
 ### Requirement: Human judgment boundary
 

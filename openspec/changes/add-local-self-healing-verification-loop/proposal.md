@@ -1,6 +1,6 @@
 ## Why
 
-FlagForge has a canonical deterministic verification harness, but diagnosing and repairing a failed local run still requires a manually coordinated feedback cycle. Introduce a bounded local Loop Engineering experiment that tests whether Codex CLI can observe an eligible verification failure, produce a minimal implementation patch, and converge to a green independent verifier without controlling its own success criteria.
+FlagForge has a canonical deterministic verification harness, but diagnosing and repairing a failed local run still requires a manually coordinated feedback cycle. Introduce a bounded local Loop Engineering experiment that tests whether Codex CLI can observe an eligible verification failure, produce a minimal implementation patch, and converge to a green independent verifier without controlling its own success criteria. This is classified as a maintenance-mode engineering-learning/tooling experiment, not a new v1 product feature or an optional-v2 roadmap commitment.
 
 The first objective is to prove the loop behavior and collect evidence. Stronger OS-level isolation is a hardening phase after the functional loop is demonstrated. GitHub Actions integration remains a separate future change.
 
@@ -73,4 +73,5 @@ A separate reviewed change may later integrate the proven/hardened controller wi
 - The existing `verify` command, CI workflows, infrastructure, runtime behavior, public API, and persistence behavior remain unchanged.
 - Phase 1 may require Codex CLI for live experiments, but normal tests must use fake adapters and must not consume model credentials.
 - Phase 2 may add a supported Linux isolation backend as a local tooling prerequisite; unsupported environments must fail closed rather than silently weakening protections.
+- `docs/project-status.md` records this as an active maintenance-mode engineering-learning/tooling experiment at planning status; implementation evidence remains absent until later tasks produce it.
 - Documentation will add an ADR/runbook and record evidence by phase. A successful Phase 1 run proves only that the bounded local loop worked for that identified candidate and verifier; it does not claim full CI, release, production, or hardened unattended operation.
