@@ -1,52 +1,48 @@
-## 1. Prove the supported local execution boundary
+## 1. Phase 1 — Prove the functional loop
 
-- [ ] 1.1 Inspect the pinned Codex CLI and model configuration; document supported flags, response/events, authentication separation, and how unauthorized hooks, apps, MCPs, plugins, and nested agents are disabled.
-- [ ] 1.2 Prototype a Linux isolation adapter in disposable fixtures and record the selected backend/minimum versions; prove protected-file writes, atomic replacement, path aliases, shared temporary paths, and access to controller state are denied.
-- [ ] 1.3 Prove worker credential/network/process isolation and verifier-local Supertest sockets; make unsupported environments fail closed before real repair, without fallback permissions.
+- [ ] 1.1 Inspect the installed Codex CLI and record the tested version/capabilities required by the MVP, including non-interactive execution, `workspace-write`, approval policy `never`, structured/JSON output support, and authentication prerequisites.
+- [ ] 1.2 Define versioned controller request/result schemas, terminal statuses, exit-code mappings, attempt budgets, timeouts, patch limits, and operator-configured repair scope.
+- [ ] 1.3 Add a small Node.js controller under `scripts/` and a separate `verify:repair` npm entrypoint without modifying the existing `verify` command.
+- [ ] 1.4 Implement clean-input checks, source revision/tracked-file hashes, stale-source detection, disposable repair/verifier copies, and controller-owned evidence directories outside the repository harness tree.
+- [ ] 1.5 Implement V0, failure classification, at most three counted repair invocations, no hidden retries, and all terminal state transitions.
 
-## 2. Define controller contracts and preflight
+## 2. Phase 1 — Integrate Codex and independent verification
 
-- [ ] 2.1 Add local controller modules under `scripts/` with explicit policy, command arguments, versioned request/result schemas, terminal statuses, and exit-code mappings from the design.
-- [ ] 2.2 Implement clean-input checks, operator-authorized baseline and exact file allowlist, tool/environment identity capture, and prerequisite reporting without Git mutations or automatic setup installation.
-- [ ] 2.3 Implement original snapshot inventories, isolated candidate/verifier copies, immutable dependency inputs, private scratch paths, and stale-source detection.
-- [ ] 2.4 Implement controller-owned run directories, concurrency protection, scoped disposal, and evidence retention without changing the user's checkout.
+- [ ] 2.1 Implement the Codex adapter using non-interactive execution, `workspace-write`, approval policy `never`, bounded sanitized context, structured completion parsing, and no commit/push behavior.
+- [ ] 2.2 Implement the protected-oracle inventory and candidate admission policy. Accept only authorized existing TypeScript implementation files under `src/domain/**` or `src/application/**`, excluding schemas/public contracts, with default cumulative limits of five files and 200 changed lines.
+- [ ] 2.3 Reject protected-file changes, new files, deletion/rename, mode/link/special-file changes, dependency/config/spec/test/API/infrastructure changes, and automatic scope expansion.
+- [ ] 2.4 Reconstruct every verifier candidate from the original baseline plus admitted cumulative implementation edits; do not verify inside the repair worker's mutable workspace.
+- [ ] 2.5 Run the unchanged `npm run verify` after every admitted candidate; only its authoritative result may produce `repaired`.
+- [ ] 2.6 Implement gate/failure fingerprints, candidate identity, gate progression, empty-patch detection, cycle/repeated-state detection, and two-attempt no-progress escalation.
+- [ ] 2.7 Export a hash-identified verified patch and human-readable/machine-readable evidence without applying it to the user's checkout or Git history.
 
-## 3. Implement independent verification and bounded control flow
+## 3. Phase 1 — Deterministic tests and controlled experiments
 
-- [ ] 3.1 Add the verifier adapter that executes the unchanged `npm run verify` with controlled environment, authoritative exit status, gate progression, and before/after oracle integrity checks.
-- [ ] 3.2 Implement initial-pass short circuit, at most three counted repair invocations, independent verification per admissible patch, and all terminal transitions without hidden retries.
-- [ ] 3.3 Implement per-process/global deadlines, cancellation, whole-worker-tree termination, and non-success handling for evidence/process failures.
-- [ ] 3.4 Implement conservative failure classification, stable diagnostic fingerprints, cycle/empty-patch detection, and the two-attempt no-progress rule while allowing legitimate advancement to later gates.
+- [ ] 3.1 Add fake verifier/Codex adapters and deterministic controller tests for initial green, repair success on R1/R2/R3, exhaustion, `needs_human`, `operational_error`, timeouts, malformed agent output, and interruption.
+- [ ] 3.2 Test repair policy and reconstruction: protected inputs, unauthorized paths, cumulative limits, empty patches, repeated states, stale/dirty inputs, and preservation of user files/Git history.
+- [ ] 3.3 Add reversible controlled experiment fixtures for: TypeScript failure, lint/format failure when applicable, implementation-caused unit-test failure, required test/spec change, required API/infrastructure change, protected-file tampering, repeated ineffective repair, Codex/protocol failure, and initially green input.
+- [ ] 3.4 Run at least one real local Codex repair demonstration on a supported environment and record exact CLI/configuration, initial failure, attempts, candidate patch, independent verifier result, and limitations.
+- [ ] 3.5 Record Phase 1 metrics: eligible repair success, attempts, durations, gate progression, patch size, escalation/policy reasons, and available usage data. Keep initially green and ineligible runs out of the repair-success denominator.
 
-## 4. Integrate scoped Codex repair and patch admission
+## 4. Phase 1 — Document the proven operating model
 
-- [ ] 4.1 Add the Codex adapter using explicit `workspace-write`, approval policy `never`, controlled configuration, JSONL capture, and validated structured responses; pass bounded sanitized context through argument arrays/stdin.
-- [ ] 4.2 Enforce the fixed protected surfaces and operator allowlist; inspect full repository inventories and reject disallowed creation, removal, rename, links, special files, mode changes, and cumulative size-limit violations.
-- [ ] 4.3 Add delta-based bypass/suppression detection and failure-linked patch rationale checks; escalate uncertain semantics, relevance, required test changes, or wider scope instead of approving them automatically.
-- [ ] 4.4 Reconstruct each verifier candidate from the original snapshot plus admitted cumulative edits; prevent transfer of worker caches, dependencies, reports, or surviving processes.
-- [ ] 4.5 Export a hash-identified final patch only after independent verification and policy success; preserve unsuccessful candidates separately as unverified evidence.
+- [ ] 4.1 Create an ADR describing controller-owned success authority, frozen oracle, patch-only handoff, conservative autonomy boundaries, and the separation between functional proof, hardening, and future CI automation.
+- [ ] 4.2 Add a local runbook covering invocation, clean-input preparation, allowed repair scope, budgets, terminal outcomes, evidence, patch review/application, and known Phase 1 limitations.
+- [ ] 4.3 Update affected README/context/current-status guidance to distinguish planned design, mocked tests, live local repair evidence, hardened execution, full CI, and production evidence.
+- [ ] 4.4 Review Phase 1 with Staff/QA/security-operability guidance, run `npm run verify`, and run strict OpenSpec validation before claiming the functional MVP complete.
 
-## 5. Produce evidence and local metrics
+## 5. Phase 2 — Harden unattended local execution
 
-- [ ] 5.1 Record manifests, raw captured streams, structured agent responses, patch/policy decisions, independent verification, and terminal reports with source/candidate/tool/policy identities.
-- [ ] 5.2 Implement restrictive artifact access, sanitization, explicit truncation, stream/run size ceilings, and failure behavior for missing evidence or exhausted storage.
-- [ ] 5.3 Record initial pass, eligible repair outcomes by attempt, escalation/violation reasons, durations, patch statistics, and available token/cost data; document denominators and unknown usage values.
-- [ ] 5.4 Provide a concise human handoff identifying the last failure, attempted fixes, candidate validity, and the decision needed; keep reports outside the harness input tree and disable automatic uploads.
+- [ ] 5.1 Select and document the first supported Linux isolation backend/minimum versions, evaluating an unprivileged mechanism such as bubblewrap/namespaces.
+- [ ] 5.2 Prove protected verification/controller files cannot be modified through direct writes, atomic replacement, unlink/rename, symlink/hard-link/path traversal, or shared temporary paths.
+- [ ] 5.3 Prove repair worker descendants are terminated on completion/timeout and cannot continue mutating controller-owned state.
+- [ ] 5.4 Separate model-client authentication from worker execution credentials; prevent worker access to project/cloud/Git/SSH secrets, Docker socket, unrestricted user-home state, and unauthorized Codex extension surfaces.
+- [ ] 5.5 Constrain worker command network access and per-worker caches/scratch while preserving only the model-client connectivity required by the supported Codex execution model.
+- [ ] 5.6 Add adversarial tests for malicious diagnostics, forged green claims, cache/dependency contamination, path aliases, protected evidence tampering, and attempts to weaken the verifier.
+- [ ] 5.7 Fail closed with `operational_error` when the hardened execution boundary cannot be enforced; do not claim prompt-only or post-diff checks as equivalent isolation.
+- [ ] 5.8 Run and record a hardened live Codex repair demonstration, then rerun `npm run verify` and strict OpenSpec validation.
 
-## 6. Verify lifecycle and adversarial behavior
+## 6. Future change — CI automation
 
-- [ ] 6.1 Add deterministic tests with fake verifier/Codex adapters for initial green, repair success at each attempt, exhaustion, operational errors, human escalation, and malformed/incomplete agent responses.
-- [ ] 6.2 Test cancellation, timeouts, descendant termination, no hidden retries, concurrency, dirty/stale inputs, and preservation of user files and Git history.
-- [ ] 6.3 Test every protected surface and patch-operation restriction, cumulative limits, temporary write-and-restore attempts, symlink/hard-link/path traversal, ignored-file tampering, and protected evidence access.
-- [ ] 6.4 Test reward-hacking examples, malicious diagnostic instructions, forged green output, worker dependency/cache contamination, and oracle-integrity failure after a zero exit status.
-- [ ] 6.5 Test gate progression, identical failures with changed patches, repeated states/cycles, empty patches, inconsistent/flaky evidence, and out-of-scope failures from static infrastructure tests.
-- [ ] 6.6 Test artifact sanitization/truncation/storage failures and success-rate denominators; verify missing usage is not represented as zero.
-- [ ] 6.7 Run supported-platform isolation checks and a real harness smoke in disposable copies, then an explicitly local live-Codex repair demonstration; record versions, prerequisites, observed outcomes, and limits separately from mocked tests.
-
-## 7. Integrate the opt-in workflow and document evidence
-
-- [ ] 7.1 Add the separate `verify:repair` npm entrypoint without modifying `verify`, existing CI workflows, infrastructure, runtime behavior, or public API contracts; ensure controller tests join the ordinary test suite without model access.
-- [ ] 7.2 Create an ADR and local runbook covering invocation, clean-input/allowlist preparation, protected paths, budgets, terminal outcomes, patch review/application by a human, retention/cleanup, and unsupported-environment diagnostics.
-- [ ] 7.3 Align affected README, context, agent guidance, and current-status summaries with actual local evidence; distinguish planned design, deterministic tests, live repair, full CI, and production operation.
-- [ ] 7.4 Review architecture, QA, and security/operability concerns using applicable repository guidance; resolve findings about isolation, verifier independence, bypasses, and human escalation before claiming completion.
-- [ ] 7.5 Run `npm run verify` and strict OpenSpec validation, inspect the final scope and sensitive-data boundaries, and record any unrelated failures without broad cleanup.
+- [ ] 6.1 Do not modify GitHub Actions in this change.
+- [ ] 6.2 Capture follow-up requirements for a separate OpenSpec change covering CI failure ingestion, trusted runner design, repository/token permissions, branch/PR mutation, artifact publication, and CI-specific human gates.
